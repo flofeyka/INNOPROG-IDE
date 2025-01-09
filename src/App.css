@@ -1,38 +1,56 @@
-.App {
-  text-align: center;
+/* Стили для редактора */
+.editor-container {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
 }
 
-.App-logo {
-  height: 40vmin;
+.editor-textarea {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  padding: 1rem;
+  color: transparent;
+  background: transparent;
+  caret-color: white;
+  resize: none;
+  white-space: pre;
+  overflow: auto;
+  tab-size: 2;
+}
+
+.editor-textarea:focus {
+  outline: none;
+}
+
+.editor-highlighting {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  padding: 1rem;
   pointer-events: none;
+  white-space: pre;
+  overflow: auto;
+  tab-size: 2;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+.editor-textarea, .editor-highlighting, .editor-highlighting * {
+  font-family: monospace;
+  line-height: 1.5;
+  font-size: inherit;
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+/* Стили для вывода */
+.error-output {
+  color: #ef4444;
 }
 
-.App-link {
-  color: #61dafb;
+.error-output .token {
+  color: inherit !important;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
+/* ... остальные стили для Prism и скроллбара остаются без изменений ... */
