@@ -227,14 +227,14 @@ return "Выполнение завершено!";`);
   };
 
   return (
-    <div className="min-h-screen bg-ide-background text-ide-text-primary flex flex-col">
-      <header className="bg-ide-secondary border-b border-ide-border">
+    <div className="min-h-screen h-screen flex flex-col bg-ide-background text-ide-text-primary">
+      <header className="bg-ide-secondary border-b border-ide-border flex-none">
         <div className="container mx-auto px-4 py-3 md:py-4">
           <h1 className="text-lg md:text-xl font-bold">INNOPROG</h1>
         </div>
       </header>
 
-      <div className="md:hidden flex border-b border-ide-border">
+      <div className="md:hidden flex border-b border-ide-border flex-none">
         <button
           className={`flex-1 py-3 px-4 text-sm transition-colors ${
             activeTab === 'editor'
@@ -257,65 +257,71 @@ return "Выполнение завершено!";`);
         </button>
       </div>
 
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-        <div 
-          className={`flex-1 md:w-1/2 p-4 md:border-r border-ide-border ${
-            activeTab === 'editor' ? 'block' : 'hidden md:block'
-          }`}
-        >
-          <div className="flex flex-col h-full bg-ide-editor rounded-lg overflow-hidden">
-            <div className="bg-ide-secondary px-3 py-2 border-b border-ide-border">
-              <span className="text-ide-text-secondary text-sm">script.js</span>
+      <main className="flex-1 overflow-hidden">
+        <div className="h-full flex flex-col md:flex-row">
+          <div 
+            className={`h-full md:w-1/2 ${
+              activeTab === 'editor' ? 'block' : 'hidden md:block'
+            }`}
+          >
+            <div className="h-full p-4">
+              <div className="flex flex-col h-full bg-ide-editor rounded-lg overflow-hidden">
+                <div className="bg-ide-secondary px-3 py-2 border-b border-ide-border">
+                  <span className="text-ide-text-secondary text-sm">script.js</span>
+                </div>
+                <div className="editor-container flex-1">
+                  <textarea
+                    ref={textareaRef}
+                    className="editor-textarea p-4 font-mono text-sm md:text-base resize-none focus:outline-none"
+                    value={code}
+                    onChange={handleCodeChange}
+                    onKeyDown={handleKeyDown}
+                    spellCheck="false"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    data-gramm="false"
+                  />
+                  <pre 
+                    className="editor-highlighting p-4 font-mono text-sm md:text-base"
+                    aria-hidden="true"
+                  >
+                    <code ref={preRef} className="language-javascript">
+                      {code}
+                    </code>
+                  </pre>
+                </div>
+              </div>
             </div>
-            <div className="editor-container flex-1">
-              <textarea
-                ref={textareaRef}
-                className="editor-textarea p-4 font-mono text-sm md:text-base resize-none focus:outline-none"
-                value={code}
-                onChange={handleCodeChange}
-                onKeyDown={handleKeyDown}
-                spellCheck="false"
-                autoCapitalize="none"
-                autoCorrect="off"
-                data-gramm="false"
-              />
-              <pre 
-                className="editor-highlighting p-4 font-mono text-sm md:text-base"
-                aria-hidden="true"
-              >
-                <code ref={preRef} className="language-javascript">
-                  {code}
-                </code>
-              </pre>
+          </div>
+
+          <div 
+            className={`h-full md:w-1/2 ${
+              activeTab === 'output' ? 'block' : 'hidden md:block'
+            }`}
+          >
+            <div className="h-full p-4">
+              <div className="flex flex-col h-full bg-ide-editor rounded-lg overflow-hidden">
+                <div className="bg-ide-secondary px-3 py-2 border-b border-ide-border flex items-center justify-between">
+                  <span className="text-ide-text-secondary text-sm">Output</span>
+                  {getStatusIcon()}
+                </div>
+                <div className="flex-1 p-4 overflow-auto">
+                  <pre 
+                    ref={outputRef}
+                    className={`font-mono text-sm md:text-base whitespace-pre-wrap break-words ${
+                      status === 'error' ? 'error-output' : ''
+                    }`}
+                  >
+                    {output || 'Нет результата'}
+                  </pre>
+                </div>
+              </div>
             </div>
           </div>
         </div>
+      </main>
 
-        <div 
-          className={`flex-1 md:w-1/2 p-4 ${
-            activeTab === 'output' ? 'block' : 'hidden md:block'
-          }`}
-        >
-          <div className="flex flex-col h-full bg-ide-editor rounded-lg overflow-hidden">
-            <div className="bg-ide-secondary px-3 py-2 border-b border-ide-border flex items-center justify-between">
-              <span className="text-ide-text-secondary text-sm">Output</span>
-              {getStatusIcon()}
-            </div>
-            <div className="flex-1 p-4 overflow-auto">
-              <pre 
-                ref={outputRef}
-                className={`font-mono text-sm md:text-base whitespace-pre-wrap break-words ${
-                  status === 'error' ? 'error-output' : ''
-                }`}
-              >
-                {output || 'Нет результата'}
-              </pre>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-ide-secondary border-t border-ide-border">
+      <footer className="bg-ide-secondary border-t border-ide-border flex-none">
         <div className="container mx-auto px-4 py-3 md:py-4 flex items-center justify-between">
           <button
             onClick={handleRunCode}
@@ -338,7 +344,7 @@ return "Выполнение завершено!";`);
             {isRunning ? 'Выполняется...' : 'Выполнить'}
           </button>
         </div>
-      </div>
+      </footer>
     </div>
   );
 }
