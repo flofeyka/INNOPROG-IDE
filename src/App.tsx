@@ -79,7 +79,7 @@ function App() {
       console.log('Отправляемые данные:', checkData);
 
       try {
-        const result = await api.checkCode(checkData);
+        const result = await api.checkCode(checkData, language);
         console.log('Ответ от сервера:', result);
 
         if (result.result) {
@@ -87,7 +87,7 @@ function App() {
           setStatus('success');
         } else {
           setOutput(
-            `Ошибка: ${result.comment || 'Неверный результат'}\nПолучено: ${result.output}\nОжидалось: ${task?.answers![0].output}`
+            `Ошибка: ${result.comment || 'Неверный результат'} ${result.output !== "error" && `\nПолучено: ${result.output}\nОжидалось: ${task?.answers![0].output}`}`
           );
           setStatus('error');
         }
