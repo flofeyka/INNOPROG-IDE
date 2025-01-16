@@ -27,6 +27,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
   const editorContainer = useRef<HTMLDivElement>(null);
   const isUpdating = useRef(false);
 
+  // Создаем редактор только один раз при монтировании
   useEffect(() => {
     if (!editorContainer.current) return;
 
@@ -42,7 +43,6 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
           if (update.docChanged && !isUpdating.current) {
             const newValue = update.state.doc.toString();
             onChange(newValue);
-            editor.current?.focus();
           }
         }),
         EditorView.editable.of(!readOnly),
@@ -74,31 +74,31 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
     });
 
     editor.current = view;
-    editor.current.focus();
 
     return () => {
       view.destroy();
     };
-  }, [language, readOnly, onChange, value]);
-  console.log(value);
+  }, [language, readOnly]); // Убрали value и onChange из зависимостей
 
-  // Обновляем содержимое при изменении value
+  // Обновляем содержимое только когда value изменяется извне
   useEffect(() => {
     if (editor.current) {
       const currentContent = editor.current.state.doc.toString();
-      if (value !== currentContent) {
+      if (value !== currentContent && !isUpdating.current) {
+        const selection = editor.current.state.selection;
         isUpdating.current = true;
         editor.current.dispatch({
           changes: {
             from: 0,
             to: currentContent.length,
             insert: value
-          }
+          },
+          selection: selection // Сохраняем позицию курсора
         });
         isUpdating.current = false;
       }
     }
-  }, [value, onChange]);
+  }, [value]);
 
   return (
     <div className="relative h-full rounded-lg overflow-hidden bg-ide-editor">
