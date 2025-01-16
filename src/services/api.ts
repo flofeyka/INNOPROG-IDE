@@ -9,9 +9,9 @@ export const api = {
     return response.data;
   },
 
-  async checkCode(data: CodeCheckRequest): Promise<CheckResult> {
+  async checkCode(data: CodeCheckRequest, language: string): Promise<CheckResult> {
     console.log('Отправка запроса:', data);
-    const response = await axios.post(`${API_URL}/check/py`, data, {
+    const response = await axios.post(`${API_URL}/check/${language}`, data, {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer bot'

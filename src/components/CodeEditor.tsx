@@ -1,10 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 import { EditorState } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
-import { javascript } from '@codemirror/lang-javascript';
 import { python } from '@codemirror/lang-python';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { defaultKeymap } from '@codemirror/commands';
+import { cpp } from '@codemirror/lang-cpp';
 
 interface CodeEditorProps {
   value: string;
@@ -30,7 +30,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
   useEffect(() => {
     if (!editorContainer.current) return;
 
-    const languageSupport = language === 'py' ? python() : javascript();
+    const languageSupport = language === 'py' ? python() : cpp();
 
     const state = EditorState.create({
       doc: value,
@@ -79,7 +79,8 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
     return () => {
       view.destroy();
     };
-  }, [language, readOnly]);
+  }, [language, readOnly, onChange, value]);
+  console.log(value);
 
   // Обновляем содержимое при изменении value
   useEffect(() => {
