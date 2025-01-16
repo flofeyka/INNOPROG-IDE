@@ -42,6 +42,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
           if (update.docChanged && !isUpdating.current) {
             const newValue = update.state.doc.toString();
             onChange(newValue);
+            editor.current?.focus();
           }
         }),
         EditorView.editable.of(!readOnly),
@@ -54,6 +55,8 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
           '.cm-scroller': {
             fontFamily: 'Consolas, monospace',
             lineHeight: '1.6',
+            '-webkit-overflow-scrolling': 'touch',
+            'touch-action': 'manipulation'
           },
           '.cm-content': {
             caretColor: '#fff',
@@ -71,11 +74,12 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
     });
 
     editor.current = view;
+    editor.current.focus();
 
     return () => {
       view.destroy();
     };
-  }, [language, readOnly, value, onChange]);
+  }, [language, readOnly]);
 
   // Обновляем содержимое при изменении value
   useEffect(() => {
