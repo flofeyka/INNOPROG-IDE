@@ -15,9 +15,9 @@ interface CodeEditorProps {
   readOnly?: boolean;
 }
 
-const CodeEditor: React.FC<CodeEditorProps> = ({ 
-  value, 
-  onChange, 
+const CodeEditor: React.FC<CodeEditorProps> = ({
+  value,
+  onChange,
   language = 'javascript',
   codeBefore = '',
   codeAfter = '',
@@ -105,8 +105,8 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
       <div className="px-3 py-2 border-b border-ide-border bg-ide-secondary">
         <span className="text-ide-text-secondary text-sm">main.{language}</span>
       </div>
-      <div 
-        ref={editorContainer} 
+      <div
+        ref={editorContainer}
         className="h-[calc(100%-40px)] overflow-auto"
       />
     </div>
