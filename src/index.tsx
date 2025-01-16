@@ -5,9 +5,49 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 
+declare global {
+  interface Window {
+    Telegram: {
+      WebApp: {
+        requestFullscreen: () => void;
+      };
+    };
+  }
+}
+
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
+
+function isDesktop() {
+  const userAgent = navigator.userAgent.toLowerCase();
+  return userAgent.includes("windows") || userAgent.includes("macintosh") || userAgent.includes("linux");
+}
+console.log(isDesktop());
+if (!isDesktop()) {
+  const header = document.querySelector('.header') as HTMLElement;
+  if (header) {
+    header.style.marginTop = '90px';
+  }
+  try {
+
+    window.Telegram.WebApp.requestFullscreen();
+  } catch (e) {
+    console.log(e)
+  }
+}
+
+
+document.addEventListener('touchstart', function (event) {
+  const activeElement = document.activeElement as HTMLElement;
+  const target = event.target as Node;
+
+  if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+    if (!activeElement.contains(target)) {
+      activeElement.blur();
+    }
+  }
+});
 root.render(
   <React.StrictMode>
     <BrowserRouter>
