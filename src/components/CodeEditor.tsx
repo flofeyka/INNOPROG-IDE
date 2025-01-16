@@ -75,7 +75,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
     return () => {
       view.destroy();
     };
-  }, [language, readOnly]);
+  }, [language, readOnly, value, onChange]);
 
   // Обновляем содержимое при изменении value
   useEffect(() => {
@@ -93,7 +93,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
         isUpdating.current = false;
       }
     }
-  }, [value]);
+  }, [value, onChange]);
 
   return (
     <div className="relative h-full rounded-lg overflow-hidden bg-ide-editor">

@@ -107,17 +107,17 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen h-screen flex flex-col bg-ide-background text-ide-text-primary">
+    <div className="min-h-screen h-[100dvh] flex flex-col bg-ide-background text-ide-text-primary">
       <header className="bg-ide-secondary border-b border-ide-border flex-none">
         <div className="container mx-auto lg:px-0 px-4 py-3 md:py-4">
           <h1 className="text-lg md:text-xl font-bold">
-            <img src="/logo.svg" alt="innoprog" className='lg:h-[50px] h-[40px]' />
+            <img src="/logo.svg" alt="innoprog" className='lg:h-[50px] h-[35px]' />
           </h1>
         </div>
       </header>
 
       {task && (
-        <div className="bg-ide-secondary p-4 border-b border-ide-border overflow-auto">
+        <div className="flex-none bg-ide-secondary p-4 border-b border-ide-border overflow-auto max-h-[30dvh]">
           <div className="container mx-auto">
             <div className="prose prose-invert max-w-none">
               <div dangerouslySetInnerHTML={{ __html: task.description }} />
@@ -136,7 +136,7 @@ function App() {
         </div>
       )}
 
-      <main className="flex-1 overflow-hidden">
+      <main className="flex-1 overflow-hidden min-h-0">
         <div className="h-full flex flex-col md:flex-row">
           <div
             className={`h-full md:w-1/2 p-4 ${activeTab === 'editor' ? 'block' : 'hidden md:block'
