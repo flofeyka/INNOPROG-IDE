@@ -111,7 +111,7 @@ function App() {
       <header className="bg-ide-secondary border-b border-ide-border flex-none">
         <div className="container mx-auto lg:px-0 px-4 py-3 md:py-4">
           <h1 className="text-lg md:text-xl font-bold">
-            <img src="/logo.svg" alt="innoprog" className='lg:h-[50px] h-[40px]' />
+            <img src="/logo.svg" alt="innoprog" className='lg:h-[50px] h-[35px]' />
           </h1>
         </div>
       </header>
