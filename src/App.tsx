@@ -23,7 +23,7 @@ function App() {
 
 
   const onSendCheck = async () => {
-    const submittedCode = task?.answers && task.answers.length > 1 ? code : `${currentAnswer?.code_before}${code}${currentAnswer?.code_after}`;
+    const submittedCode = task?.answers && task.answers.length > 1 ? code : `${currentAnswer?.code_before ? currentAnswer.code_before : ''}${code}${currentAnswer?.code_after ? currentAnswer.code_after : ''}`;
 
     await api.submitCode({
       program: submittedCode,
