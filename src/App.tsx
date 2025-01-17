@@ -24,14 +24,14 @@ function App() {
 
   const onSendCheck = async () => {
     const submittedCode = task?.answers && task.answers.length > 1 ? code : `${currentAnswer?.code_before ? currentAnswer.code_before : ''}${code}${currentAnswer?.code_after ? currentAnswer.code_after : ''}`;
-
+    
+    await window.Telegram.WebApp.close();
     await api.submitCode({
       program: submittedCode,
       user_id: window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 429272623,
       answer_id: Number(answer_id) || 123,
       task_id: Number(taskId)
     });
-    window.Telegram.WebApp.close();
   }
 
   useEffect(() => {
