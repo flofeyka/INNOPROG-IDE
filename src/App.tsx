@@ -24,14 +24,17 @@ function App() {
 
   const onSendCheck = async () => {
     const submittedCode = task?.answers && task.answers.length > 1 ? code : `${currentAnswer?.code_before ? currentAnswer.code_before : ''}${code}${currentAnswer?.code_after ? currentAnswer.code_after : ''}`;
-    
+    try {
+      await api.submitCode({
+        program: submittedCode,
+        user_id: window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 429272623,
+        answer_id: Number(answer_id) || 123,
+        task_id: Number(taskId)
+      });
+    } catch {
+      alert("Ошибка отправки кода на проверку");
+    }
     await window.Telegram.WebApp.close();
-    await api.submitCode({
-      program: submittedCode,
-      user_id: window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 429272623,
-      answer_id: Number(answer_id) || 123,
-      task_id: Number(taskId)
-    });
   }
 
   useEffect(() => {
