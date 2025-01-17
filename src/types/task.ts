@@ -41,6 +41,13 @@ export interface CodeCheckRequest {
   timeout: number;
 }
 
+export interface SubmitRequest {
+  user_id: number;
+  task_id: number;
+  program: string;
+  answer_id: number;
+}
+
 export interface CheckResult {
   result: boolean;
   error?: string;

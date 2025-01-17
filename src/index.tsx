@@ -10,6 +10,8 @@ declare global {
     Telegram: {
       WebApp: {
         requestFullscreen: () => void;
+        initDataUnsafe: any;
+        close: () => void;
       };
     };
   }
