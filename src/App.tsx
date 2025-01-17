@@ -53,7 +53,7 @@ function App() {
 
       if (answer_id) {
         api.getSubmitCode(
-          Number(answer_id),
+          answer_id,
           window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 429272623,
           Number(taskId)
         ).then(data => {
