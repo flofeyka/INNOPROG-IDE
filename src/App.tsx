@@ -20,6 +20,18 @@ function App() {
 
   const taskId = searchParams.get('task_id');
   const language = searchParams.get('lang') || 'py';
+  const answer_id = searchParams.get('answer_id');
+
+
+  const onSendCheck = async () => {
+    await api.submitCode({
+      program: code,
+      user_id: window.Telegram.WebApp.initDataUnsafe.user?.id || 429272623,
+      answer_id: Number(answer_id) || 123,
+      task_id: Number(taskId)
+    });
+    window.Telegram.WebApp.close();
+  }
 
   useEffect(() => {
     if (taskId) {
@@ -35,8 +47,16 @@ function App() {
         .catch(error => {
           console.error('Failed to load task:', error);
         });
+      if (answer_id) {
+        api.getSubmitCode(Number(answer_id), window.Telegram.WebApp.initDataUnsafe.user?.id || 429272623, Number(taskId)).then(data => {
+          if (data.code) {
+            setCode(data.code);
+            return;
+          }
+        })
+      }
     }
-  }, [taskId]);
+  }, [taskId, answer_id]);
 
   const getStatusIcon = () => {
     switch (status) {
@@ -58,6 +78,10 @@ function App() {
   };
 
   const handleRunCode = async () => {
+    if (status === "success") {
+      await onSendCheck();
+      return;
+    }
     setIsRunning(true);
     setStatus('idle');
 
@@ -108,7 +132,7 @@ function App() {
 
   return (
     <div className="min-h-screen h-[100dvh] flex flex-col bg-ide-background text-ide-text-primary">
-      <header className="bg-ide-secondary border-b border-ide-border flex-none">
+      <header className="bg-ide-secondary border-b border-ide-border flex-none mt-4">
         <div className="container mx-auto lg:px-0 px-4 py-3 md:py-4">
           <h1 className="text-lg md:text-xl font-bold">
             <img src="/logo.svg" alt="innoprog" className='lg:h-[50px] h-[35px]' />
@@ -180,7 +204,7 @@ function App() {
       </main>
 
       <footer className="bg-ide-secondary border-t border-ide-border flex-none">
-        <div className="container mx-auto px-4 py-3 md:py-4 flex items-center lg:flex-row flex-col gap-3 justify-between">
+        <div className="container mx-auto px-4 py-3 md:py-4 flex items-center lg:flex-row flex-col gap-3 ">
           <button
             onClick={handleRunCode}
             disabled={isRunning}
@@ -198,9 +222,9 @@ function App() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             )}
-            {isRunning ? 'Выполняется...' : 'Выполнить'}
+            {status === "success" ? "Отправить на проверку" : isRunning ? 'Выполняется...' : 'Выполнить'}
           </button>
-          {activeTab === "output" && <div className='lg:hidden w-full md:hidden'>
+          {activeTab === "output" && status !== "success" && <div className='lg:hidden w-full md:hidden'>
             <button onClick={() => setActiveTab("editor")} className={`w-full md:w-auto bg-red-500 hover:bg-red-600 text-ide-text-primary font-medium px-6 py-2.5 rounded transition-colors flex items-center justify-center gap-2`}>Попробовать снова</button>
           </div>}
         </div>
