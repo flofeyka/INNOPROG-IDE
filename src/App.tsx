@@ -146,7 +146,7 @@ function App() {
 
 
       {task && (
-        <div className="flex-none bg-ide-secondary p-4 border-b border-ide-border overflow-auto max-h-[30dvh]">
+        <div className={`flex-none bg-ide-secondary ${!isDesktop() ? "mt-[110px]" : ""} p-4 border-b border-ide-border overflow-auto max-h-[30dvh]`}>
           <div className="container mx-auto">
             <div className="prose prose-invert max-w-none">
               <div dangerouslySetInnerHTML={{ __html: task.description }} />
