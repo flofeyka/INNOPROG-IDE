@@ -4,6 +4,7 @@ import './App.css';
 import CodeEditor from './components/CodeEditor';
 import { api } from './services/api';
 import { Answer, Task } from './types/task';
+import { isDesktop } from '.';
 
 function App() {
   const [searchParams] = useSearchParams();
@@ -134,11 +135,13 @@ function App() {
 
   return (
     <div className="min-h-screen h-screen flex flex-col bg-ide-background text-ide-text-primary">
+      {isDesktop() && (
       <header className="bg-ide-secondary border-b border-ide-border flex-none">
         <div className="container mx-auto px-4 py-3 md:py-4">
           <img src="/logo.svg" alt="INNOPROG" className="h-10" />
         </div>
       </header>
+      )}
 
       {task && (
         <div className="bg-ide-secondary p-4 border-b border-ide-border overflow-auto">

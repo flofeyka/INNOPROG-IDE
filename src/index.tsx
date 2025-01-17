@@ -23,7 +23,7 @@ const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
 
-function isDesktop() {
+export function isDesktop() {
   const userAgent = navigator.userAgent.toLowerCase();
   return userAgent.includes("windows") || userAgent.includes("macintosh") || userAgent.includes("linux");
 }
