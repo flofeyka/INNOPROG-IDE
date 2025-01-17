@@ -137,46 +137,27 @@ function App() {
   return (
     <div className="min-h-screen h-screen flex flex-col bg-ide-background text-ide-text-primary">
       {isDesktop() && (
-      <header className="bg-ide-secondary border-b border-ide-border flex-none">
-        <div className="container mx-auto lg:px-0 px-4 py-3 md:py-4">
-          <img src="/logo.svg" alt="INNOPROG" className="h-10" />
-        </div>
-      </header>
+        <header className="bg-ide-secondary border-b border-ide-border flex-none">
+          <div className="container mx-auto lg:px-0 px-4 py-3 md:py-4">
+            <img src="/logo.svg" alt="INNOPROG" className="h-10" />
+          </div>
+        </header>
       )}
 
+
       {task && (
-        <div className={`bg-ide-secondary ${!isDesktop() ? "mt-[110px]" : ""} border-b border-ide-border overflow-auto`}>
-          <div className="container mx-auto p-3.5">
+        <div className="flex-none bg-ide-secondary p-4 border-b border-ide-border overflow-auto max-h-[30dvh]">
+          <div className="container mx-auto">
             <div className="prose prose-invert max-w-none">
               <div dangerouslySetInnerHTML={{ __html: task.description }} />
-              {task.input_description && (
+              {task.answers && task.answers.length > 1 && (
                 <>
-                  <h3>Входные данные</h3>
-                  <div dangerouslySetInnerHTML={{ __html: task.input_description }} />
-                </>
-              )}
-              {task.output_description && (
-                <>
-                  <h3>Выходные данные</h3>
-                  <div dangerouslySetInnerHTML={{ __html: task.output_description }} />
-                </>
-              )}
-              {task.examples && task.examples.length > 0 && (
-                <>
-                  <h3>Примеры</h3>
-                  {task.examples.map((example, index) => (
-                    <div key={index} className="mb-4">
-                      <div className="font-mono bg-ide-editor p-2 rounded">
-                        <div>Входные данные:</div>
-                        <pre>{example.input}</pre>
-                        <div>Выходные данные:</div>
-                        <pre>{example.output}</pre>
-                      </div>
-                      {example.explanation && (
-                        <div className="mt-2">{example.explanation}</div>
-                      )}
-                    </div>
-                  ))}
+                  {task.answers[0].input && <>
+                    <div>Входные данные:</div>
+                    <pre>{task.answers[0].input}</pre></>}
+
+                  <div className='mt-3'>Выходные данные:</div>
+                  <pre>{task.answers[0].output}</pre>
                 </>
               )}
             </div>
@@ -233,8 +214,8 @@ function App() {
           <button
             onClick={handleRunCode}
             disabled={isRunning}
-              className={`w-full md:w-auto ${status !== "success" ? "bg-ide-button-primary" : "bg-[#9C78FF]"} ${status === "success" ? "" : "hover:bg-ide-button-primary-hover"}  text-ide-text-primary font-medium px-6 py-2.5 rounded transition-colors flex items-center justify-center gap-2 ${isRunning ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
+            className={`w-full md:w-auto ${status !== "success" ? "bg-ide-button-primary" : "bg-[#9C78FF]"} ${status === "success" ? "" : "hover:bg-ide-button-primary-hover"}  text-ide-text-primary font-medium px-6 py-2.5 rounded transition-colors flex items-center justify-center gap-2 ${isRunning ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
           >
             {isRunning ? (
               <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
