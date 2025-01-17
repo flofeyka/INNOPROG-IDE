@@ -26,6 +26,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
   const editor = useRef<EditorView>();
   const editorContainer = useRef<HTMLDivElement>(null);
   const isUpdating = useRef(false);
+  const prevValue = useRef(value);
 
   useEffect(() => {
     if (!editorContainer.current) return;
@@ -40,23 +41,33 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
         keymap.of(defaultKeymap),
         EditorView.updateListener.of((update) => {
           if (update.docChanged && !isUpdating.current) {
-            const newValue = update.state.doc.toString();
-            if (newValue.startsWith(codeBefore) && newValue.endsWith(codeAfter)) {
+            try {
+              const newValue = update.state.doc.toString();
+              if (!newValue.startsWith(codeBefore) || !newValue.endsWith(codeAfter)) {
+                // Восстанавливаем состояние если пользователь изменил защищенные части
+                isUpdating.current = true;
+                editor.current?.dispatch({
+                  changes: {
+                    from: 0,
+                    to: newValue.length,
+                    insert: `${codeBefore}${prevValue.current}${codeAfter}`
+                  }
+                });
+                isUpdating.current = false;
+                return;
+              }
+
               const userCode = newValue.slice(
                 codeBefore.length,
                 newValue.length - codeAfter.length
               );
-              onChange(userCode);
-            } else {
-              isUpdating.current = true;
-              editor.current?.dispatch({
-                changes: {
-                  from: 0,
-                  to: newValue.length,
-                  insert: `${codeBefore}${value}${codeAfter}`
-                }
-              });
-              isUpdating.current = false;
+
+              if (userCode !== prevValue.current) {
+                prevValue.current = userCode;
+                onChange(userCode);
+              }
+            } catch (error) {
+              console.error('Error in editor update:', error);
             }
           }
         }),
@@ -76,9 +87,6 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
           },
           '&.cm-focused': {
             outline: 'none',
-          },
-          '.cm-readonly': {
-            backgroundColor: 'rgba(0, 0, 0, 0.1)',
           }
         }),
       ],
@@ -94,24 +102,25 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
     return () => {
       view.destroy();
     };
-  }, [language, readOnly]);
+  }, [language, readOnly, codeBefore, codeAfter]); // value намеренно исключен
 
-  // Обновляем содержимое при изменении props
+  // Обновляем содержимое при изменении value извне
   useEffect(() => {
-    if (editor.current) {
-      const fullContent = `${codeBefore}${value}${codeAfter}`;
-      const currentContent = editor.current.state.doc.toString();
-
-      if (fullContent !== currentContent) {
+    if (editor.current && value !== prevValue.current) {
+      try {
         isUpdating.current = true;
+        const fullContent = `${codeBefore}${value}${codeAfter}`;
         editor.current.dispatch({
           changes: {
             from: 0,
-            to: currentContent.length,
+            to: editor.current.state.doc.length,
             insert: fullContent
           }
         });
+        prevValue.current = value;
         isUpdating.current = false;
+      } catch (error) {
+        console.error('Error updating editor content:', error);
       }
     }
   }, [value, codeBefore, codeAfter]);
@@ -119,7 +128,9 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
   return (
     <div className="relative h-full rounded-lg overflow-hidden bg-ide-editor">
       <div className="px-3 py-2 border-b border-ide-border bg-ide-secondary">
-        <span className="text-ide-text-secondary text-sm">script.js</span>
+        <span className="text-ide-text-secondary text-sm">
+          {language === 'py' ? 'script.py' : 'script.js'}
+        </span>
       </div>
       <div 
         ref={editorContainer} 
