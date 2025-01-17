@@ -197,7 +197,7 @@ function App() {
                 <div className="flex-1 p-4 overflow-auto">
                   <pre
                     ref={outputRef}
-                    className={`font-mono text-sm md:text-base whitespace-pre-wrap break-words ${status === 'error' ? 'error-output' : ''
+                    className={`font-mono text-sm md:text-base whitespace-pre-wrap break-words ${status === 'error' ? 'error-output' : status === "success" ? "text-green-500" : ""
                       }`}
                   >
                     {output || 'Нет результата'}
