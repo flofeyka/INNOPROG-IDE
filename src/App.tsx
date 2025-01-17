@@ -229,8 +229,8 @@ function App() {
           <button
             onClick={handleRunCode}
             disabled={isRunning}
-            className={`w-full md:w-auto bg-ide-button-primary hover:bg-ide-button-primary-hover text-ide-text-primary font-medium px-6 py-2.5 rounded transition-colors flex items-center justify-center gap-2 ${isRunning ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
+              className={`w-full md:w-auto ${status !== "success" ? "bg-ide-button-primary" : "bg-[#9C78FF]"} ${status === "success" ? "" : "hover:bg-ide-button-primary-hover"}  text-ide-text-primary font-medium px-6 py-2.5 rounded transition-colors flex items-center justify-center gap-2 ${isRunning ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
           >
             {isRunning ? (
               <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
