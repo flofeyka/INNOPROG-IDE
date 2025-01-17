@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Task, CheckResult, Answer } from './types/task';
-import { api } from './services/api';
-import CodeEditor from './components/CodeEditor';
 import './App.css';
+import CodeEditor from './components/CodeEditor';
+import { api } from './services/api';
+import { Answer, Task } from './types/task';
 
 function App() {
   const [searchParams] = useSearchParams();
@@ -12,7 +12,7 @@ function App() {
   const [output, setOutput] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'editor' | 'output'>('editor');
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [isRunning, setIsRunning] = useState(false);
+  const [isRunning, setIsRunning] = useState<boolean>(false);
   const outputRef = useRef<HTMLPreElement>(null);
   const [currentAnswer, setCurrentAnswer] = useState<Answer | null>(null);
 
@@ -23,7 +23,7 @@ function App() {
 
   const onSendCheck = async () => {
     const submittedCode = task?.answers && task.answers.length > 1 ? code : `${currentAnswer?.code_before}${code}${currentAnswer?.code_after}`;
-    
+
     await api.submitCode({
       program: submittedCode,
       user_id: window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 429272623,
@@ -41,7 +41,7 @@ function App() {
           if (taskData.answers && taskData.answers.length > 0) {
             setCurrentAnswer(taskData.answers[0]);
           }
-          
+
           if (!answer_id) {
             setCode('');
           }
@@ -52,8 +52,8 @@ function App() {
 
       if (answer_id) {
         api.getSubmitCode(
-          Number(answer_id), 
-          window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 429272623, 
+          Number(answer_id),
+          window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 429272623,
           Number(taskId)
         ).then(data => {
           if (data.code) {
@@ -99,7 +99,7 @@ function App() {
         throw new Error('Нет тестовых данных');
       }
 
-      const fullCode = `${currentAnswer.code_before}${code}${currentAnswer.code_after}`;
+      const fullCode = `${currentAnswer.code_before ? currentAnswer.code_before : ''}${code}${currentAnswer.code_after ? currentAnswer.code_after : ''}`;
 
       const checkData = {
         input_data: currentAnswer.input || "-",
@@ -116,8 +116,7 @@ function App() {
         setStatus('success');
       } else {
         setOutput(
-          `Ошибка: ${result.comment || 'Неверный результат'}${
-            result.output !== "error" ? `\nПолучено: ${result.output}\nОжидалось: ${currentAnswer.output}` : ''
+          `Ошибка: ${result.comment || 'Неверный результат'}${result.output !== "error" ? `\nПолучено: ${result.output}\nОжидалось: ${currentAnswer.output}` : ''
           }`
         );
         setStatus('error');
@@ -137,9 +136,7 @@ function App() {
     <div className="min-h-screen h-screen flex flex-col bg-ide-background text-ide-text-primary">
       <header className="bg-ide-secondary border-b border-ide-border flex-none">
         <div className="container mx-auto px-4 py-3 md:py-4">
-          <h1 className="text-lg md:text-xl font-bold">
-            {task ? task.title : 'INNOPROG'}
-          </h1>
+          <img src="/logo.svg" alt="INNOPROG" className="h-10" />
         </div>
       </header>
 
@@ -195,8 +192,8 @@ function App() {
               language={language}
               codeBefore={currentAnswer?.code_before || ''}
               codeAfter={currentAnswer?.code_after || ''}
-              readOnly={task?.type === 'Дополнение кода' ? 
-                (currentAnswer ? false : true) : 
+              readOnly={task?.type === 'Дополнение кода' ?
+                (currentAnswer ? false : true) :
                 false
               }
             />

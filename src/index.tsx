@@ -29,20 +29,20 @@ function isDesktop() {
 }
 console.log(isDesktop());
 if (!isDesktop()) {
-  const style = document.createElement('style');
-  style.textContent = `
-    body {
-      padding-top: 90px !important;
-      padding-bottom: 15px !important;
-    }
-  `;
-  document.head.appendChild(style);
+  const header = document.querySelector('.header') as HTMLElement;
+  const footer = document.querySelector('.footer') as HTMLElement;
+  if (header) {
+    header.style.marginTop = '90px';
+  }
+  if (footer) {
+    footer.style.marginBottom = '15px';
+  }
 
   try {
     window.Telegram.WebApp.expand();
     window.Telegram.WebApp.requestFullscreen();
   } catch (e) {
-    console.log(e)
+    alert(e)
   }
 }
 
