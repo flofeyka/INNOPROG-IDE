@@ -31,9 +31,7 @@ function App() {
         answer_id: Number(answer_id) || 123,
         task_id: Number(taskId)
       });
-    } catch {
-      alert("Ошибка отправки кода на проверку");
-    }
+    } catch { }
     await window.Telegram.WebApp.close();
   }
 
