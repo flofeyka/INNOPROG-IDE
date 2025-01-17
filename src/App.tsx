@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import './App.css';
-import CodeEditor from './components/CodeEditor';
+import { Task, CheckResult, Answer } from './types/task';
 import { api } from './services/api';
-import { Answer, Task } from './types/task';
+import CodeEditor from './components/CodeEditor';
+import './App.css';
 
 function App() {
   const [searchParams] = useSearchParams();
@@ -16,17 +16,17 @@ function App() {
   const outputRef = useRef<HTMLPreElement>(null);
   const [currentAnswer, setCurrentAnswer] = useState<Answer | null>(null);
 
-  console.log(currentAnswer)
-
   const taskId = searchParams.get('task_id');
   const language = searchParams.get('lang') || 'py';
   const answer_id = searchParams.get('answer_id');
 
 
   const onSendCheck = async () => {
+    const submittedCode = task?.answers && task.answers.length > 1 ? code : `${currentAnswer?.code_before}${code}${currentAnswer?.code_after}`;
+    
     await api.submitCode({
-      program: code,
-      user_id: window.Telegram.WebApp.initDataUnsafe.user?.id || 429272623,
+      program: submittedCode,
+      user_id: window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 429272623,
       answer_id: Number(answer_id) || 123,
       task_id: Number(taskId)
     });
@@ -38,22 +38,28 @@ function App() {
       api.getTask(taskId)
         .then(taskData => {
           setTask(taskData);
-          setCode(taskData.answers![0].code_after || '');
-
           if (taskData.answers && taskData.answers.length > 0) {
             setCurrentAnswer(taskData.answers[0]);
+          }
+          
+          if (!answer_id) {
+            setCode('');
           }
         })
         .catch(error => {
           console.error('Failed to load task:', error);
         });
+
       if (answer_id) {
-        api.getSubmitCode(Number(answer_id), window.Telegram.WebApp.initDataUnsafe.user?.id || 429272623, Number(taskId)).then(data => {
+        api.getSubmitCode(
+          Number(answer_id), 
+          window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 429272623, 
+          Number(taskId)
+        ).then(data => {
           if (data.code) {
             setCode(data.code);
-            return;
           }
-        })
+        });
       }
     }
   }, [taskId, answer_id]);
@@ -86,17 +92,17 @@ function App() {
     setStatus('idle');
 
     try {
-      if (!currentAnswer) {
+      if (!currentAnswer || !task) {
         throw new Error('Нет тестовых данных');
       }
 
-      const fullCode = `${code}`;
+      const fullCode = `${currentAnswer.code_before}${code}${currentAnswer.code_after}`;
 
       const checkData = {
         input_data: currentAnswer.input || "-",
         output_data: currentAnswer.output,
         program: fullCode,
-        test_number: 1,
+        test_number: -1,
         timeout: currentAnswer.timeout
       };
 
@@ -110,8 +116,12 @@ function App() {
           setOutput(result.comment || 'Тест пройден успешно!');
           setStatus('success');
         } else {
+          const outputMessage = task.answers && task.answers.length > 1
+            ? `\nПолучено: ${result.output}\nОжидалось: ${task?.answers![0].output}`
+            : '';
+
           setOutput(
-            `Ошибка: ${result.comment || 'Неверный результат'} ${result.output !== "error" && `\nПолучено: ${result.output}\nОжидалось: ${task?.answers![0].output}`}`
+            `Ошибка: ${result.comment || 'Неверный результат'} ${result.output !== "error" ? outputMessage : ''}`
           );
           setStatus('error');
         }
@@ -132,20 +142,20 @@ function App() {
 
   return (
     <div className="min-h-screen h-[100dvh] flex flex-col bg-ide-background text-ide-text-primary">
-      <header className="bg-ide-secondary border-b border-ide-border flex-none mt-4">
-        <div className="container mx-auto lg:px-0 px-4 py-3 md:py-4">
+      <header className="bg-ide-secondary border-b border-ide-border flex-none hidden md:block">
+        <div className="container mx-auto px-4 py-3 md:py-4">
           <h1 className="text-lg md:text-xl font-bold">
-            <img src="/logo.svg" alt="innoprog" className='lg:h-[50px] h-[35px]' />
+            {task ? task.title : 'INNOPROG'}
           </h1>
         </div>
       </header>
 
       {task && (
-        <div className="flex-none bg-ide-secondary p-4 border-b border-ide-border overflow-auto max-h-[30dvh]">
-          <div className="container mx-auto">
+        <div className="bg-ide-secondary border-b border-ide-border overflow-y-auto flex-shrink mt-[100px] md:mt-0 max-h-[30vh] md:max-h-none">
+          <div className="container mx-auto p-4">
             <div className="prose prose-invert max-w-none">
               <div dangerouslySetInnerHTML={{ __html: task.description }} />
-              {task.answers && task.answers.length > 0 && (
+              {task.answers && task.answers.length > 1 && (
                 <>
                   {task.answers[0].input && <>
                     <div>Входные данные:</div>
@@ -160,22 +170,20 @@ function App() {
         </div>
       )}
 
-      <main className="flex-1 overflow-hidden min-h-0">
+      <main className="flex-1 overflow-hidden">
         <div className="h-full flex flex-col md:flex-row">
           <div
             className={`h-full md:w-1/2 p-4 ${activeTab === 'editor' ? 'block' : 'hidden md:block'
               }`}
           >
-            <div className="h-full">
-              <CodeEditor
-                value={code}
-                onChange={setCode}
-                language={language}
-                codeBefore={currentAnswer?.code_before || ''}
-                codeAfter={currentAnswer?.code_after || ''}
-                readOnly={false}
-              />
-            </div>
+            <CodeEditor
+              value={code}
+              onChange={setCode}
+              language={language}
+              codeBefore={currentAnswer?.code_before || ''}
+              codeAfter={currentAnswer?.code_after || ''}
+              readOnly={task?.type === 'Дополнение кода' ? false : true}
+            />
           </div>
 
           <div
@@ -183,7 +191,7 @@ function App() {
               }`}
           >
             <div className="h-full p-4">
-              <div className="h-full flex flex-col bg-ide-editor rounded-lg overflow-hidden">
+              <div className="flex flex-col h-full bg-ide-editor rounded-lg overflow-hidden">
                 <div className="bg-ide-secondary px-3 py-2 border-b border-ide-border flex items-center justify-between">
                   <span className="text-ide-text-secondary text-sm">Output</span>
                   {getStatusIcon()}
@@ -203,8 +211,8 @@ function App() {
         </div>
       </main>
 
-      <footer className="bg-ide-secondary border-t border-ide-border flex-none">
-        <div className="container mx-auto px-4 py-3 md:py-4 flex items-center lg:flex-row flex-col gap-3 ">
+      <footer className="bg-ide-secondary border-t border-ide-border flex-none pb-[15px] md:pb-0">
+        <div className="container mx-auto px-4 py-3 md:py-4 flex items-center lg:flex-row flex-col gap-3">
           <button
             onClick={handleRunCode}
             disabled={isRunning}

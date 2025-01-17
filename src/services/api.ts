@@ -18,7 +18,7 @@ export const api = {
 
   async checkCode(data: CodeCheckRequest, language: string): Promise<CheckResult> {
     console.log('Отправка запроса:', data);
-    const response = await BASE_API.post(`/check/${language}`, data, {
+    const response = await BASE_API.post(`https://api.innoprog.ru/check/${language}`, data, {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer bot'

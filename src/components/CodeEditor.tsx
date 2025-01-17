@@ -1,10 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 import { EditorState } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
+import { javascript } from '@codemirror/lang-javascript';
 import { python } from '@codemirror/lang-python';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { defaultKeymap } from '@codemirror/commands';
-import { cpp } from '@codemirror/lang-cpp';
 
 interface CodeEditorProps {
   value: string;
@@ -15,9 +15,9 @@ interface CodeEditorProps {
   readOnly?: boolean;
 }
 
-const CodeEditor: React.FC<CodeEditorProps> = ({
-  value,
-  onChange,
+const CodeEditor: React.FC<CodeEditorProps> = ({ 
+  value, 
+  onChange, 
   language = 'javascript',
   codeBefore = '',
   codeAfter = '',
@@ -27,14 +27,13 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
   const editorContainer = useRef<HTMLDivElement>(null);
   const isUpdating = useRef(false);
 
-  // Создаем редактор только один раз при монтировании
   useEffect(() => {
     if (!editorContainer.current) return;
 
-    const languageSupport = language === 'py' ? python() : cpp();
+    const languageSupport = language === 'py' ? python() : javascript();
 
     const state = EditorState.create({
-      doc: value,
+      doc: `${codeBefore}${value}${codeAfter}`,
       extensions: [
         languageSupport,
         oneDark,
@@ -42,7 +41,23 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
         EditorView.updateListener.of((update) => {
           if (update.docChanged && !isUpdating.current) {
             const newValue = update.state.doc.toString();
-            onChange(newValue);
+            if (newValue.startsWith(codeBefore) && newValue.endsWith(codeAfter)) {
+              const userCode = newValue.slice(
+                codeBefore.length,
+                newValue.length - codeAfter.length
+              );
+              onChange(userCode);
+            } else {
+              isUpdating.current = true;
+              editor.current?.dispatch({
+                changes: {
+                  from: 0,
+                  to: newValue.length,
+                  insert: `${codeBefore}${value}${codeAfter}`
+                }
+              });
+              isUpdating.current = false;
+            }
           }
         }),
         EditorView.editable.of(!readOnly),
@@ -55,14 +70,15 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
           '.cm-scroller': {
             fontFamily: 'Consolas, monospace',
             lineHeight: '1.6',
-            '-webkit-overflow-scrolling': 'touch',
-            'touch-action': 'manipulation'
           },
           '.cm-content': {
             caretColor: '#fff',
           },
           '&.cm-focused': {
             outline: 'none',
+          },
+          '.cm-readonly': {
+            backgroundColor: 'rgba(0, 0, 0, 0.1)',
           }
         }),
       ],
@@ -78,35 +94,35 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
     return () => {
       view.destroy();
     };
-  }, [language, readOnly]); // Убрали value и onChange из зависимостей
+  }, [language, readOnly]);
 
-  // Обновляем содержимое только когда value изменяется извне
+  // Обновляем содержимое при изменении props
   useEffect(() => {
     if (editor.current) {
+      const fullContent = `${codeBefore}${value}${codeAfter}`;
       const currentContent = editor.current.state.doc.toString();
-      if (value !== currentContent && !isUpdating.current) {
-        const selection = editor.current.state.selection;
+
+      if (fullContent !== currentContent) {
         isUpdating.current = true;
         editor.current.dispatch({
           changes: {
             from: 0,
             to: currentContent.length,
-            insert: value
-          },
-          selection: selection // Сохраняем позицию курсора
+            insert: fullContent
+          }
         });
         isUpdating.current = false;
       }
     }
-  }, [value]);
+  }, [value, codeBefore, codeAfter]);
 
   return (
     <div className="relative h-full rounded-lg overflow-hidden bg-ide-editor">
       <div className="px-3 py-2 border-b border-ide-border bg-ide-secondary">
-        <span className="text-ide-text-secondary text-sm">main.{language}</span>
+        <span className="text-ide-text-secondary text-sm">script.js</span>
       </div>
-      <div
-        ref={editorContainer}
+      <div 
+        ref={editorContainer} 
         className="h-[calc(100%-40px)] overflow-auto"
       />
     </div>
