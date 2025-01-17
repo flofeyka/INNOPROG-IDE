@@ -13,6 +13,7 @@ declare global {
         requestFullscreen: () => void;
         initDataUnsafe: any;
         close: () => void;
+        expand: () => void;
       };
     };
   }
@@ -28,12 +29,17 @@ function isDesktop() {
 }
 console.log(isDesktop());
 if (!isDesktop()) {
-  const header = document.querySelector('.header') as HTMLElement;
-  if (header) {
-    header.style.marginTop = '90px';
-  }
-  try {
+  const style = document.createElement('style');
+  style.textContent = `
+    body {
+      padding-top: 90px !important;
+      padding-bottom: 15px !important;
+    }
+  `;
+  document.head.appendChild(style);
 
+  try {
+    window.Telegram.WebApp.expand();
     window.Telegram.WebApp.requestFullscreen();
   } catch (e) {
     console.log(e)

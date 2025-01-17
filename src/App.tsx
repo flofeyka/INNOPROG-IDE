@@ -64,6 +64,8 @@ function App() {
     }
   }, [taskId, answer_id]);
 
+  console.log(currentAnswer);
+
   const getStatusIcon = () => {
     switch (status) {
       case 'success':
@@ -90,6 +92,7 @@ function App() {
     }
     setIsRunning(true);
     setStatus('idle');
+    setOutput('');
 
     try {
       if (!currentAnswer || !task) {
@@ -103,34 +106,24 @@ function App() {
         output_data: currentAnswer.output,
         program: fullCode,
         test_number: -1,
-        timeout: currentAnswer.timeout
+        timeout: currentAnswer.timeout || 2
       };
 
-      console.log('Отправляемые данные:', checkData);
+      const result = await api.checkCode(checkData, language);
 
-      try {
-        const result = await api.checkCode(checkData, language);
-        console.log('Ответ от сервера:', result);
-
-        if (result.result) {
-          setOutput(result.comment || 'Тест пройден успешно!');
-          setStatus('success');
-        } else {
-          const outputMessage = task.answers && task.answers.length > 1
-            ? `\nПолучено: ${result.output}\nОжидалось: ${task?.answers![0].output}`
-            : '';
-
-          setOutput(
-            `Ошибка: ${result.comment || 'Неверный результат'} ${result.output !== "error" ? outputMessage : ''}`
-          );
-          setStatus('error');
-        }
-      } catch (apiError) {
-        console.error('Ошибка API:', apiError);
+      if (result.result) {
+        setOutput(result.comment || 'Тест пройден успешно!');
+        setStatus('success');
+      } else {
+        setOutput(
+          `Ошибка: ${result.comment || 'Неверный результат'}${
+            result.output !== "error" ? `\nПолучено: ${result.output}\nОжидалось: ${currentAnswer.output}` : ''
+          }`
+        );
         setStatus('error');
       }
     } catch (error: any) {
-      console.error('Общая ошибка:', error);
+      setOutput(`Ошибка выполнения: ${error.message}`);
       setStatus('error');
     } finally {
       setIsRunning(false);
@@ -141,8 +134,8 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen h-[100dvh] flex flex-col bg-ide-background text-ide-text-primary">
-      <header className="bg-ide-secondary border-b border-ide-border flex-none hidden md:block">
+    <div className="min-h-screen h-screen flex flex-col bg-ide-background text-ide-text-primary">
+      <header className="bg-ide-secondary border-b border-ide-border flex-none">
         <div className="container mx-auto px-4 py-3 md:py-4">
           <h1 className="text-lg md:text-xl font-bold">
             {task ? task.title : 'INNOPROG'}
@@ -151,18 +144,38 @@ function App() {
       </header>
 
       {task && (
-        <div className="bg-ide-secondary border-b border-ide-border overflow-y-auto flex-shrink mt-[100px] md:mt-0 max-h-[30vh] md:max-h-none">
-          <div className="container mx-auto p-4">
+        <div className="bg-ide-secondary p-4 border-b border-ide-border overflow-auto">
+          <div className="container mx-auto">
             <div className="prose prose-invert max-w-none">
               <div dangerouslySetInnerHTML={{ __html: task.description }} />
-              {task.answers && task.answers.length > 1 && (
+              {task.input_description && (
                 <>
-                  {task.answers[0].input && <>
-                    <div>Входные данные:</div>
-                    <pre>{task.answers[0].input}</pre></>}
-
-                  <div className='mt-3'>Выходные данные:</div>
-                  <pre>{task.answers[0].output}</pre>
+                  <h3>Входные данные</h3>
+                  <div dangerouslySetInnerHTML={{ __html: task.input_description }} />
+                </>
+              )}
+              {task.output_description && (
+                <>
+                  <h3>Выходные данные</h3>
+                  <div dangerouslySetInnerHTML={{ __html: task.output_description }} />
+                </>
+              )}
+              {task.examples && task.examples.length > 0 && (
+                <>
+                  <h3>Примеры</h3>
+                  {task.examples.map((example, index) => (
+                    <div key={index} className="mb-4">
+                      <div className="font-mono bg-ide-editor p-2 rounded">
+                        <div>Входные данные:</div>
+                        <pre>{example.input}</pre>
+                        <div>Выходные данные:</div>
+                        <pre>{example.output}</pre>
+                      </div>
+                      {example.explanation && (
+                        <div className="mt-2">{example.explanation}</div>
+                      )}
+                    </div>
+                  ))}
                 </>
               )}
             </div>
@@ -182,7 +195,10 @@ function App() {
               language={language}
               codeBefore={currentAnswer?.code_before || ''}
               codeAfter={currentAnswer?.code_after || ''}
-              readOnly={task?.type === 'Дополнение кода' ? false : true}
+              readOnly={task?.type === 'Дополнение кода' ? 
+                (currentAnswer ? false : true) : 
+                false
+              }
             />
           </div>
 
@@ -211,8 +227,8 @@ function App() {
         </div>
       </main>
 
-      <footer className="bg-ide-secondary border-t border-ide-border flex-none pb-[15px] md:pb-0">
-        <div className="container mx-auto px-4 py-3 md:py-4 flex items-center lg:flex-row flex-col gap-3">
+      <footer className="bg-ide-secondary border-t border-ide-border flex-none">
+        <div className="container mx-auto px-4 py-3 md:py-4 flex items-center lg:flex-row flex-col gap-3 ">
           <button
             onClick={handleRunCode}
             disabled={isRunning}
