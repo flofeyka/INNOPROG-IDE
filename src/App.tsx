@@ -11,7 +11,7 @@ function App() {
   const [code, setCode] = useState<string>('');
   const [output, setOutput] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'editor' | 'output'>('editor');
-  const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [status, setStatus] = useState<'idle' | 'success' | 'error'>('success');
   const [isRunning, setIsRunning] = useState(false);
   const outputRef = useRef<HTMLPreElement>(null);
   const [currentAnswer, setCurrentAnswer] = useState<Answer | null>(null);
@@ -35,18 +35,18 @@ function App() {
 
   useEffect(() => {
     if (taskId) {
-      api.getTask(taskId)
-        .then(taskData => {
-          setTask(taskData);
-          setCode(taskData.answers![0].code_after || '');
+      // api.getTask(taskId)
+      //   .then(taskData => {
+      //     setTask(taskData);
+      //     setCode(taskData.answers![0].code_after || '');
 
-          if (taskData.answers && taskData.answers.length > 0) {
-            setCurrentAnswer(taskData.answers[0]);
-          }
-        })
-        .catch(error => {
-          console.error('Failed to load task:', error);
-        });
+      //     if (taskData.answers && taskData.answers.length > 0) {
+      //       setCurrentAnswer(taskData.answers[0]);
+      //     }
+      //   })
+      //   .catch(error => {
+      //     console.error('Failed to load task:', error);
+      //   });
       if (answer_id) {
         api.getSubmitCode(Number(answer_id), window.Telegram.WebApp.initDataUnsafe.user?.id || 429272623, Number(taskId)).then(data => {
           if (data.code) {

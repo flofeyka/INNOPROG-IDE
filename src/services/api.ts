@@ -18,7 +18,7 @@ export const api = {
 
   async checkCode(data: CodeCheckRequest, language: string): Promise<CheckResult> {
     console.log('Отправка запроса:', data);
-    const response = await BASE_API.post(`/check/${language}`, data, {
+    const response = await BASE_API.post(`https://api.innoprog.ru/check/${language}`, data, {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer bot'
@@ -35,9 +35,7 @@ export const api = {
   },
 
   async getSubmitCode(answer_id: number, user_id: number, task_id: number) {
-    const response = await fetch(`https://bot.innoprog.ru:8443/answer/code?answer_id=${answer_id}&user_id=${user_id}&task_id=${task_id}`);
-    const data = await response.json();
-    // const {data} = await BASE_API.get();
+    const {data} = await BASE_API.get(`/answer/code?answer_id=${answer_id}&user_id=${user_id}&task_id=${task_id}`);
     console.log('Submit code response: ', data);
     return data;
   }
