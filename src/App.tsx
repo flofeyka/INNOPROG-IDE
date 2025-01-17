@@ -137,14 +137,14 @@ function App() {
     <div className="min-h-screen h-screen flex flex-col bg-ide-background text-ide-text-primary">
       {isDesktop() && (
       <header className="bg-ide-secondary border-b border-ide-border flex-none">
-        <div className="container mx-auto px-4 py-3 md:py-4">
+        <div className="container mx-auto lg:px-0 px-4 py-3 md:py-4">
           <img src="/logo.svg" alt="INNOPROG" className="h-10" />
         </div>
       </header>
       )}
 
       {task && (
-        <div className={`bg-ide-secondary ${isDesktop() ? "mt-[125px]" : ""} border-b border-ide-border overflow-auto`}>
+        <div className={`bg-ide-secondary ${!isDesktop() ? "mt-[125px]" : ""} border-b border-ide-border overflow-auto`}>
           <div className="container mx-auto">
             <div className="prose prose-invert max-w-none">
               <div dangerouslySetInnerHTML={{ __html: task.description }} />
@@ -227,7 +227,7 @@ function App() {
         </div>
       </main>
 
-      <footer className={`bg-ide-secondary  ${isDesktop() ? "mb-[15px]" : ""} border-t border-ide-border flex-none`}>
+      <footer className={`bg-ide-secondary  ${!isDesktop() ? "mb-[15px]" : ""} border-t border-ide-border flex-none`}>
         <div className="container mx-auto px-4 py-3 md:py-4 flex items-center lg:flex-row flex-col gap-3 ">
           <button
             onClick={handleRunCode}
