@@ -27,7 +27,6 @@ export function isDesktop() {
   const userAgent = navigator.userAgent.toLowerCase();
   return userAgent.includes("windows") || userAgent.includes("macintosh") || userAgent.includes("linux");
 }
-console.log(isDesktop());
 if (!isDesktop()) {
   const header = document.querySelector('.header') as HTMLElement;
   const footer = document.querySelector('.footer') as HTMLElement;
