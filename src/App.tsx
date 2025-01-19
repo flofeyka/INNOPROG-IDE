@@ -5,7 +5,7 @@ import CodeEditor from './components/CodeEditor';
 import { api } from './services/api';
 import { Answer, Task } from './types/task';
 import { isDesktop } from '.';
-import { Button, Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, useDisclosure } from '@heroui/react';
+import { Button, Input, Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, Spinner, useDisclosure } from '@heroui/react';
 
 function App() {
   const [searchParams] = useSearchParams();
@@ -17,11 +17,13 @@ function App() {
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const outputRef = useRef<HTMLPreElement>(null);
   const [currentAnswer, setCurrentAnswer] = useState<Answer | null>(null);
-  const [submitResult, setSubmitResult] = useState<"success" | "error">("success");
+  const [submitResult, setSubmitResult] = useState<"success" | "error" | "no_data">("success");
+  const [inputData, setInputData] = useState<string>("-");
+  const [outputData, setoutputData] = useState<string>("-");
 
   const { onOpen, onOpenChange, isOpen, onClose } = useDisclosure();
 
-  const taskId = searchParams.get('task_id');
+  const taskId = searchParams.get('task_id') || undefined;
   const language = searchParams.get('lang') || 'py';
   const answer_id = searchParams.get('answer_id');
 
@@ -100,7 +102,7 @@ function App() {
   };
 
   const handleRunCode = async () => {
-    if (status === "success") {
+    if (status === "success" && taskId) {
       await onSendCheck();
       return;
     }
@@ -109,18 +111,20 @@ function App() {
     setOutput('');
 
     try {
-      if (!currentAnswer || !task) {
-        throw new Error('Нет тестовых данных');
+      if ((!currentAnswer || !task) && submitResult !== "no_data") {
+        setSubmitResult("no_data");
+        onOpen();
+        return;
       }
 
-      const fullCode = `${currentAnswer.code_before ? currentAnswer.code_before : ''}${code}${currentAnswer.code_after ? currentAnswer.code_after : ''}`;
+      const fullCode = `${currentAnswer?.code_before ? currentAnswer?.code_before : ''}${code}${currentAnswer?.code_after ? currentAnswer?.code_after : ''}`;
 
       const checkData = {
-        input_data: currentAnswer.input || "-",
-        output_data: currentAnswer.output,
+        input_data: currentAnswer?.input || inputData,
+        output_data: currentAnswer?.output || outputData,
         program: fullCode,
         test_number: -1,
-        timeout: currentAnswer.timeout || 2
+        timeout: currentAnswer?.timeout || 2
       };
 
       const result = await api.checkCode(checkData, language);
@@ -130,11 +134,12 @@ function App() {
         setStatus('success');
       } else {
         setOutput(
-          `Ошибка: ${result.comment || 'Неверный результат'}${result.output !== "error" ? `\nПолучено: ${result.output}\nОжидалось: ${currentAnswer.output}` : ''
+          `Ошибка: ${result.comment || 'Неверный результат'}${result.output !== "error" ? `\nПолучено: ${result.output}\nОжидалось: ${currentAnswer?.output || outputData}` : ''
           }`
         );
         setStatus('error');
       }
+
     } catch (error: any) {
       setOutput(`Ошибка выполнения: ${error.message}`);
       setStatus('error');
@@ -143,6 +148,7 @@ function App() {
       if (window.innerWidth < 768) {
         setActiveTab('output');
       }
+      
     }
   };
 
@@ -150,12 +156,22 @@ function App() {
     <div className="min-h-screen h-screen flex flex-col bg-ide-background text-ide-text-primary">
       <Modal onOpenChange={onOpenChange} isOpen={isOpen} >
         <ModalContent>
-          {/* <ModalHeader>Результат</ModalHeader> */}
+          {submitResult === "no_data" && <ModalHeader>Введите данные</ModalHeader>}
           <ModalBody>
-            <div className='text-center text-3xl'>{submitResult === "success" ? "✅Все тесты прошли успешно!" : "❌Неверное решение."}</div>
+            <div className='text-center text-3xl'>{submitResult === "success" ? "✅Все тесты прошли успешно!" : submitResult === "error" ? "❌Неверное решение." : <div className='flex flex-col gap-2'>
+              <Input value={inputData} label='Входные данные' onChange={(e) => setInputData(e.target.value)} />
+              <Input value={outputData} label='Выходные данные' onChange={(e) => setoutputData(e.target.value)} />
+            </div>}</div>
           </ModalBody>
           <ModalFooter className='flex justify-center w-full'>
-            <Button onPress={onClose} className='w-full' color="danger">Закрыть</Button>
+            <Button size="lg" disabled={isRunning} onPress={async () => {
+              if (submitResult === "no_data" && outputData) {
+                await handleRunCode();
+              }
+              onClose()
+            }} className='w-full' color={submitResult === "no_data" ? "secondary" : "danger"}> {submitResult === "no_data" ? <div className='flex gap-2 items-center'>
+              {isRunning && <Spinner />} Применить
+            </div> : "Закрыть"}</Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
@@ -236,12 +252,12 @@ function App() {
       <footer className={`bg-ide-secondary  ${!isDesktop() ? "mb-[15px]" : ""} border-t border-ide-border flex-none`}>
         <div className="container mx-auto px-4 py-3 md:py-4 flex items-center lg:flex-row flex-col gap-3 ">
           <Button
-            onPress={status === "success" ? onSendCheck : handleRunCode}
+            onPress={status === "success" && taskId ? onSendCheck : handleRunCode}
             disabled={isRunning}
-            color={status === "success" ? 'secondary' : 'success'}
-            className='w-full text-white'
-            // className={`w-full md:w-auto ${status !== "success" ? "bg-ide-button-primary" : "bg-[#9C78FF]"} ${status === "success" ? "" : "hover:bg-ide-button-primary-hover"}  text-ide-text-primary font-medium px-6 py-2.5 rounded transition-colors flex items-center justify-center gap-2 ${isRunning ? 'opacity-50 cursor-not-allowed' : ''
-            //   }`}
+            color={status === "success" && taskId ? 'secondary' : 'success'}
+            className='w-full lg:w-auto text-white'
+          // className={`w-full md:w-auto ${status !== "success" ? "bg-ide-button-primary" : "bg-[#9C78FF]"} ${status === "success" ? "" : "hover:bg-ide-button-primary-hover"}  text-ide-text-primary font-medium px-6 py-2.5 rounded transition-colors flex items-center justify-center gap-2 ${isRunning ? 'opacity-50 cursor-not-allowed' : ''
+          //   }`}
           >
             {isRunning ? (
               <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
@@ -254,7 +270,7 @@ function App() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             )}
-            {status === "success" ? "Отправить на проверку" : isRunning ? 'Выполняется...' : 'Выполнить'}
+            {status === "success" && taskId ? "Отправить на проверку" : isRunning ? 'Выполняется...' : 'Выполнить'}
           </Button>
           {activeTab === "output" && status !== "success" && <div className='lg:hidden w-full md:hidden'>
             <Button onPress={() => setActiveTab("editor")} color='danger' className={`w-full`}>Попробовать снова</Button>
