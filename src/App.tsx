@@ -148,8 +148,38 @@ function App() {
       if (window.innerWidth < 768) {
         setActiveTab('output');
       }
-      
+
     }
+  };
+
+  const [height, setHeight] = useState(200); // Начальная высота
+  const isResizing = useRef(false); // Флаг изменения
+  const containerRef = useRef<HTMLDivElement | null>(null); // Ссылка на контейнер
+
+  const handleMouseDown = (event: any) => {
+    isResizing.current = true;
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+  };
+
+  const handleMouseMove = (event: MouseEvent) => {
+    if (!isResizing.current) return;
+
+    if (containerRef.current) {
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const newHeight = event.clientY - containerRect.top;
+
+      // Ограничиваем высоту в допустимых пределах
+      const minHeight = 100;
+      const maxHeight = 500;
+      setHeight(Math.max(minHeight, Math.min(maxHeight, newHeight)));
+    }
+  };
+
+  const handleMouseUp = () => {
+    isResizing.current = false;
+    document.removeEventListener("mousemove", handleMouseMove);
+    document.removeEventListener("mouseup", handleMouseUp);
   };
 
   return (
@@ -186,7 +216,11 @@ function App() {
 
 
       {task && (
-        <div className={`flex-none bg-ide-secondary ${!isDesktop() ? "mt-[110px]" : ""} p-4 border-b border-ide-border overflow-auto max-h-[30dvh]`}>
+        <div ref={containerRef}
+          style={{
+            position: "relative",
+            height: `${height}px`,
+          }} className={`flex-none bg-ide-secondary ${!isDesktop() ? "mt-[110px]" : ""} p-4 border-b border-ide-border overflow-auto max-h-[30dvh]`}>
           <div className="container mx-auto">
             <div className="prose prose-invert max-w-none">
               <div dangerouslySetInnerHTML={{ __html: task.description }} />
@@ -202,8 +236,33 @@ function App() {
               )}
             </div>
           </div>
+          <div
+            style={{
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: "8px",
+              background: "none",
+              cursor: "row-resize",
+              borderRadius: "0 0 8px 8px",
+              boxShadow: "inset 0 -2px 4px rgba(0, 0, 0, 0.2)",
+            }}
+            onMouseDown={handleMouseDown}
+          >
+            <div
+              style={{
+                width: "60px",
+                height: "4px",
+                background: "#666",
+                margin: "2px auto",
+                borderRadius: "2px",
+              }}
+            />
+          </div>
         </div>
-      )}
+      )
+      }
 
       <main className="flex-1 overflow-hidden">
         <div className="h-full flex flex-col md:flex-row">
@@ -277,7 +336,7 @@ function App() {
           </div>}
         </div>
       </footer>
-    </div>
+    </div >
   );
 }
 
