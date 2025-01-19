@@ -5,6 +5,7 @@ import CodeEditor from './components/CodeEditor';
 import { api } from './services/api';
 import { Answer, Task } from './types/task';
 import { isDesktop } from '.';
+import { Button, Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, useDisclosure } from '@heroui/react';
 
 function App() {
   const [searchParams] = useSearchParams();
@@ -16,6 +17,9 @@ function App() {
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const outputRef = useRef<HTMLPreElement>(null);
   const [currentAnswer, setCurrentAnswer] = useState<Answer | null>(null);
+  const [submitResult, setSubmitResult] = useState<"success" | "error">("success");
+
+  const { onOpen, onOpenChange, isOpen, onClose } = useDisclosure();
 
   const taskId = searchParams.get('task_id');
   const language = searchParams.get('lang') || 'py';
@@ -23,6 +27,7 @@ function App() {
 
 
   const onSendCheck = async () => {
+    setIsRunning(true);
     const submittedCode = task?.answers && task.answers.length > 1 ? code : `${currentAnswer?.code_before ? currentAnswer.code_before : ''}${code}${currentAnswer?.code_after ? currentAnswer.code_after : ''}`;
     try {
       await api.submitCode({
@@ -31,7 +36,14 @@ function App() {
         answer_id: Number(answer_id) || 123,
         task_id: Number(taskId)
       });
-    } catch { }
+      setSubmitResult("success");
+    } catch {
+      setSubmitResult("error")
+      setStatus('idle');
+    }
+    onOpen();
+
+    setIsRunning(false);
     await window.Telegram.WebApp.close();
   }
 
@@ -136,6 +148,18 @@ function App() {
 
   return (
     <div className="min-h-screen h-screen flex flex-col bg-ide-background text-ide-text-primary">
+      <Modal onOpenChange={onOpenChange} isOpen={isOpen} >
+        <ModalContent>
+          {/* <ModalHeader>Результат</ModalHeader> */}
+          <ModalBody>
+            <div className='text-center text-3xl'>{submitResult === "success" ? "✅Все тесты прошли успешно!" : "❌Неверное решение."}</div>
+          </ModalBody>
+          <ModalFooter className='flex justify-center w-full'>
+            <Button onPress={onClose} className='w-full' color="danger">Закрыть</Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
       {isDesktop() && (
         <header className="bg-ide-secondary border-b border-ide-border flex-none">
           <div className="container mx-auto lg:px-0 px-4 py-3 md:py-4">
@@ -211,11 +235,13 @@ function App() {
 
       <footer className={`bg-ide-secondary  ${!isDesktop() ? "mb-[15px]" : ""} border-t border-ide-border flex-none`}>
         <div className="container mx-auto px-4 py-3 md:py-4 flex items-center lg:flex-row flex-col gap-3 ">
-          <button
-            onClick={handleRunCode}
+          <Button
+            onPress={status === "success" ? onSendCheck : handleRunCode}
             disabled={isRunning}
-            className={`w-full md:w-auto ${status !== "success" ? "bg-ide-button-primary" : "bg-[#9C78FF]"} ${status === "success" ? "" : "hover:bg-ide-button-primary-hover"}  text-ide-text-primary font-medium px-6 py-2.5 rounded transition-colors flex items-center justify-center gap-2 ${isRunning ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
+            color={status === "success" ? 'secondary' : 'success'}
+            className='w-full text-white'
+            // className={`w-full md:w-auto ${status !== "success" ? "bg-ide-button-primary" : "bg-[#9C78FF]"} ${status === "success" ? "" : "hover:bg-ide-button-primary-hover"}  text-ide-text-primary font-medium px-6 py-2.5 rounded transition-colors flex items-center justify-center gap-2 ${isRunning ? 'opacity-50 cursor-not-allowed' : ''
+            //   }`}
           >
             {isRunning ? (
               <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
@@ -229,9 +255,9 @@ function App() {
               </svg>
             )}
             {status === "success" ? "Отправить на проверку" : isRunning ? 'Выполняется...' : 'Выполнить'}
-          </button>
+          </Button>
           {activeTab === "output" && status !== "success" && <div className='lg:hidden w-full md:hidden'>
-            <button onClick={() => setActiveTab("editor")} className={`w-full md:w-auto bg-red-500 hover:bg-red-600 text-ide-text-primary font-medium px-6 py-2.5 rounded transition-colors flex items-center justify-center gap-2`}>Попробовать снова</button>
+            <Button onPress={() => setActiveTab("editor")} color='danger' className={`w-full`}>Попробовать снова</Button>
           </div>}
         </div>
       </footer>

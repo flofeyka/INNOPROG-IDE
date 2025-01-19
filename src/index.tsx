@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
+import { HeroUIProvider } from '@heroui/react';
 
 
 declare global {
@@ -59,7 +60,9 @@ document.addEventListener('touchstart', function (event) {
 root.render(
   <React.StrictMode>
     <BrowserRouter>
-      <App />
+      <HeroUIProvider>
+        <App />
+      </HeroUIProvider>
     </BrowserRouter>
   </React.StrictMode>
 );
