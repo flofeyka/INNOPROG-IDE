@@ -66,22 +66,7 @@ function App() {
     }
   }, [taskId, answer_id]);
 
-  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
-
-  useEffect(() => {
-    const initialHeight = window.innerHeight;
-
-    const handleResize = () => {
-      const currentHeight = window.innerHeight;
-      // Если высота уменьшилась более чем на 100px, считаем, что клавиатура открыта
-      setIsKeyboardOpen(currentHeight < initialHeight - 100);
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => {
-      window.removeEventListener("resize", handleResize);
-    };
-  }, []);
+  console.log(currentAnswer);
 
   const getStatusIcon = () => {
     switch (status) {
@@ -224,7 +209,7 @@ function App() {
         </div>
       </main>
 
-      <footer className={`bg-ide-secondary  ${!isDesktop() ? "mb-[15px]" : ""} ${isKeyboardOpen && 'hidden'} border-t border-ide-border flex-none`}>
+      <footer className={`bg-ide-secondary  ${!isDesktop() ? "mb-[15px]" : ""} border-t border-ide-border flex-none`}>
         <div className="container mx-auto px-4 py-3 md:py-4 flex items-center lg:flex-row flex-col gap-3 ">
           <button
             onClick={handleRunCode}
