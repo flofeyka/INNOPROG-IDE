@@ -205,7 +205,7 @@ function App() {
 
       // Ограничиваем высоту в допустимых пределах
       const minHeight = 10;
-      const maxHeight = 1000;
+      const maxHeight = windowHeight - 200
       setHeight(Math.max(minHeight, Math.min(maxHeight, newHeight)));
 
       // Чтобы блокировать прокрутку на iOS
@@ -305,6 +305,7 @@ function App() {
                 right: 0,
                 height: "8px",
                 cursor: "row-resize", // Изменение курсора при наведении
+                userSelect: "none"
               }}
               onMouseDown={handleMouseDown} // Обработка зажима на ПК
               onTouchStart={handleTouchStart} // Обработка зажима на мобильных устройствах
@@ -316,6 +317,7 @@ function App() {
                   background: "#666",
                   margin: "2px auto",
                   borderRadius: "2px",
+                  zIndex: "999"
                 }}
               />
             </div>
