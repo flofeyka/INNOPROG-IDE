@@ -1,11 +1,11 @@
+import { Button, Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, Spinner, Textarea, useDisclosure } from '@heroui/react';
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { isDesktop } from '.';
 import './App.css';
 import CodeEditor from './components/CodeEditor';
 import { api } from './services/api';
 import { Answer, Task } from './types/task';
-import { isDesktop } from '.';
-import { Button, Input, Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, Spinner, Textarea, useDisclosure } from '@heroui/react';
 
 function App() {
   const [searchParams] = useSearchParams();
@@ -105,6 +105,8 @@ function App() {
     if (!currentAnswer || !taskId) {
       setSubmitResult("no_data");
       onOpen();
+    } else {
+      await handleRunCode();
     }
   }
 
@@ -233,8 +235,8 @@ function App() {
           {submitResult === "no_data" && <ModalHeader>Введите данные</ModalHeader>}
           <ModalBody>
             <div className='text-center text-3xl'>{submitResult === "success" ? "✅Все тесты прошли успешно!" : submitResult === "error" ? "❌Неверное решение." : <div className='flex flex-col gap-2'>
-              <Textarea value={inputData} label='Входные данные(если их несколько писать через следующую строку)' onChange={(e) => setInputData(e.target.value)} />
-              <Input value={outputData} label='Выходные данные' onChange={(e) => setoutputData(e.target.value)} />
+              <Textarea value={inputData} label='Входные данные' onChange={(e) => setInputData(e.target.value)} />
+              <Textarea value={outputData} label='Выходные данные' onChange={(e) => setoutputData(e.target.value)} />
             </div>}</div>
           </ModalBody>
           <ModalFooter className='flex justify-center w-full'>
@@ -258,65 +260,67 @@ function App() {
         </header>
       )}
 
-      {task && (
-        <div
-          ref={containerRef}
-          style={{
-            position: "relative", // Контейнер для абсолютного позиционирования полосы
-            height: `${height}px`,
-          }}
-          className={`flex-none bg-ide-secondary ${!isDesktop() ? "mt-[110px]" : ""} p-4 border-b border-ide-border max-h-[30dvh]`}
-        >
+      <div className={`${!isDesktop() ? "mt-[110px]" : ""}`}>
+        {task && (
           <div
+            ref={containerRef}
             style={{
-              overflow: "auto", // Прокрутка только для контента
-              height: "100%",
+              position: "relative", // Контейнер для абсолютного позиционирования полосы
+              height: `${height}px`,
             }}
-          >
-            <div className="container mx-auto">
-              <div className="prose prose-invert max-w-none">
-                <div dangerouslySetInnerHTML={{ __html: task.description }} />
-                {task.answers && task.answers.length > 1 && (
-                  <>
-                    {task.answers[0].input && (
-                      <>
-                        <div>Входные данные:</div>
-                        <pre>{task.answers[0].input}</pre>
-                      </>
-                    )}
-                    <div className="mt-3">Выходные данные:</div>
-                    <pre>{task.answers[0].output}</pre>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Полоса для изменения высоты */}
-          <div
-            style={{
-              position: "absolute", // Абсолютное позиционирование относительно контейнера
-              bottom: 0, // Привязка к нижней границе контейнера
-              left: 0,
-              right: 0,
-              height: "8px",
-              cursor: "row-resize", // Изменение курсора при наведении
-            }}
-            onMouseDown={handleMouseDown} // Обработка зажима на ПК
-            onTouchStart={handleTouchStart} // Обработка зажима на мобильных устройствах
+            className={`flex-none bg-ide-secondary p-4 border-b border-ide-border max-h-[30dvh]`}
           >
             <div
               style={{
-                width: "60px",
-                height: "4px",
-                background: "#666",
-                margin: "2px auto",
-                borderRadius: "2px",
+                overflow: "auto", // Прокрутка только для контента
+                height: "100%",
               }}
-            />
+            >
+              <div className="container mx-auto">
+                <div className="prose prose-invert max-w-none">
+                  <div dangerouslySetInnerHTML={{ __html: task.description }} />
+                  {task.answers && task.answers.length > 1 && (
+                    <>
+                      {task.answers[0].input && (
+                        <>
+                          <div>Входные данные:</div>
+                          <pre>{task.answers[0].input}</pre>
+                        </>
+                      )}
+                      <div className="mt-3">Выходные данные:</div>
+                      <pre>{task.answers[0].output}</pre>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Полоса для изменения высоты */}
+            <div
+              style={{
+                position: "absolute", // Абсолютное позиционирование относительно контейнера
+                bottom: 0, // Привязка к нижней границе контейнера
+                left: 0,
+                right: 0,
+                height: "8px",
+                cursor: "row-resize", // Изменение курсора при наведении
+              }}
+              onMouseDown={handleMouseDown} // Обработка зажима на ПК
+              onTouchStart={handleTouchStart} // Обработка зажима на мобильных устройствах
+            >
+              <div
+                style={{
+                  width: "60px",
+                  height: "4px",
+                  background: "#666",
+                  margin: "2px auto",
+                  borderRadius: "2px",
+                }}
+              />
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
 
 
