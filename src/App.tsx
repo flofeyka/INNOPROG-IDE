@@ -160,6 +160,7 @@ function App() {
   const isResizing = useRef(false); // Флаг изменения
   const containerRef = useRef<HTMLDivElement | null>(null); // Ссылка на контейнер
   const startTouchY = useRef(0); // Для отслеживания начальной точки касания
+  const windowHeight = window.innerHeight;
 
   // Для десктопа
   const handleMouseDown = (event: React.MouseEvent) => {
@@ -189,7 +190,7 @@ function App() {
 
       // Ограничиваем высоту в допустимых пределах
       const minHeight = 10;
-      const maxHeight = 700;
+      const maxHeight = windowHeight - 200;
       setHeight(Math.max(minHeight, Math.min(maxHeight, newHeight)));
     }
   };
@@ -204,7 +205,7 @@ function App() {
 
       // Ограничиваем высоту в допустимых пределах
       const minHeight = 10;
-      const maxHeight = 500;
+      const maxHeight = 1000;
       setHeight(Math.max(minHeight, Math.min(maxHeight, newHeight)));
 
       // Чтобы блокировать прокрутку на iOS
@@ -268,7 +269,7 @@ function App() {
               position: "relative", // Контейнер для абсолютного позиционирования полосы
               height: `${height}px`,
             }}
-            className={`flex-none bg-ide-secondary p-4 border-b border-ide-border max-h-[30dvh]`}
+            className={`flex-none bg-ide-secondary p-4 border-b border-ide-border`}
           >
             <div
               style={{
