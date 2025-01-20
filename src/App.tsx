@@ -188,8 +188,8 @@ function App() {
       const newHeight = event.clientY - containerRect.top;
 
       // Ограничиваем высоту в допустимых пределах
-      const minHeight = 100;
-      const maxHeight = 500;
+      const minHeight = 10;
+      const maxHeight = 700;
       setHeight(Math.max(minHeight, Math.min(maxHeight, newHeight)));
     }
   };
@@ -203,7 +203,7 @@ function App() {
       const newHeight = event.touches[0].clientY - containerRect.top;
 
       // Ограничиваем высоту в допустимых пределах
-      const minHeight = 100;
+      const minHeight = 10;
       const maxHeight = 500;
       setHeight(Math.max(minHeight, Math.min(maxHeight, newHeight)));
 
