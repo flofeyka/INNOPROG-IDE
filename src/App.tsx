@@ -42,6 +42,7 @@ function App() {
     } catch {
       setSubmitResult("error")
       setStatus('idle');
+      
     }
     onOpen();
 
@@ -395,7 +396,10 @@ function App() {
             {status === "success" && taskId ? "Отправить на проверку" : isRunning ? 'Выполняется...' : 'Выполнить'}
           </Button>
           {activeTab === "output" && <div className='lg:hidden w-full md:hidden'>
-            <Button onPress={() => setActiveTab("editor")} color='danger' className={`w-full`}>Попробовать снова</Button>
+            <Button onPress={() => {
+              setActiveTab("editor")
+              setStatus("idle");
+              }} color='danger' className={`w-full`}>Попробовать снова</Button>
           </div>}
         </div>
       </footer>
