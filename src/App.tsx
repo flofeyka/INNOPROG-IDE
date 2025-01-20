@@ -391,7 +391,7 @@ function App() {
             )}
             {status === "success" && taskId ? "Отправить на проверку" : isRunning ? 'Выполняется...' : 'Выполнить'}
           </Button>
-          {activeTab === "output" && status !== "success" && <div className='lg:hidden w-full md:hidden'>
+          {activeTab === "output" && <div className='lg:hidden w-full md:hidden'>
             <Button onPress={() => setActiveTab("editor")} color='danger' className={`w-full`}>Попробовать снова</Button>
           </div>}
         </div>
