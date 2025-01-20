@@ -5,7 +5,7 @@ import CodeEditor from './components/CodeEditor';
 import { api } from './services/api';
 import { Answer, Task } from './types/task';
 import { isDesktop } from '.';
-import { Button, Input, Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, Spinner, useDisclosure } from '@heroui/react';
+import { Button, Input, Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, Spinner, Textarea, useDisclosure } from '@heroui/react';
 
 function App() {
   const [searchParams] = useSearchParams();
@@ -18,8 +18,8 @@ function App() {
   const outputRef = useRef<HTMLPreElement>(null);
   const [currentAnswer, setCurrentAnswer] = useState<Answer | null>(null);
   const [submitResult, setSubmitResult] = useState<"success" | "error" | "no_data">("success");
-  const [inputData, setInputData] = useState<string>("-");
-  const [outputData, setoutputData] = useState<string>("-");
+  const [inputData, setInputData] = useState<string>("");
+  const [outputData, setoutputData] = useState<string>("");
 
   const { onOpen, onOpenChange, isOpen, onClose } = useDisclosure();
 
@@ -44,7 +44,7 @@ function App() {
       setStatus('idle');
     }
     onOpen();
-
+    
     setIsRunning(false);
     await window.Telegram.WebApp.close();
   }
@@ -101,6 +101,13 @@ function App() {
     }
   };
 
+  const onModalRunCode = async () => {
+    if (!currentAnswer || !taskId) {
+      setSubmitResult("no_data");
+      onOpen();
+    }
+  }
+
   const handleRunCode = async () => {
     if (status === "success" && taskId) {
       await onSendCheck();
@@ -111,17 +118,12 @@ function App() {
     setOutput('');
 
     try {
-      if ((!currentAnswer || !task) && submitResult !== "no_data") {
-        setSubmitResult("no_data");
-        onOpen();
-        return;
-      }
 
       const fullCode = `${currentAnswer?.code_before ? currentAnswer?.code_before : ''}${code}${currentAnswer?.code_after ? currentAnswer?.code_after : ''}`;
 
       const checkData = {
-        input_data: currentAnswer?.input || inputData,
-        output_data: currentAnswer?.output || outputData,
+        input_data: currentAnswer?.input || inputData || "-",
+        output_data: currentAnswer?.output || outputData || "-",
         program: fullCode,
         test_number: -1,
         timeout: currentAnswer?.timeout || 2
@@ -152,7 +154,7 @@ function App() {
     }
   };
 
-  const [height, setHeight] = useState(200); // Начальная высота
+  const [height, setHeight] = useState(150); // Начальная высота
   const isResizing = useRef(false); // Флаг изменения
   const containerRef = useRef<HTMLDivElement | null>(null); // Ссылка на контейнер
 
@@ -195,8 +197,8 @@ function App() {
       const newHeight = event.touches[0].clientY - containerRect.top;
 
       // Ограничиваем высоту в допустимых пределах
-      const minHeight = 100;
-      const maxHeight = 500;
+      const minHeight = 25;
+      const maxHeight = 550;
       setHeight(Math.max(minHeight, Math.min(maxHeight, newHeight)));
     }
   };
@@ -222,7 +224,7 @@ function App() {
           {submitResult === "no_data" && <ModalHeader>Введите данные</ModalHeader>}
           <ModalBody>
             <div className='text-center text-3xl'>{submitResult === "success" ? "✅Все тесты прошли успешно!" : submitResult === "error" ? "❌Неверное решение." : <div className='flex flex-col gap-2'>
-              <Input value={inputData} label='Входные данные' onChange={(e) => setInputData(e.target.value)} />
+              <Textarea value={inputData} label='Входные данные(если их несколько писать через следующую строку)' onChange={(e) => setInputData(e.target.value)} />
               <Input value={outputData} label='Выходные данные' onChange={(e) => setoutputData(e.target.value)} />
             </div>}</div>
           </ModalBody>
@@ -356,7 +358,7 @@ function App() {
       <footer className={`bg-ide-secondary  ${!isDesktop() ? "mb-[15px]" : ""} border-t border-ide-border flex-none`}>
         <div className="container mx-auto px-4 py-3 md:py-4 flex items-center lg:flex-row flex-col gap-3 ">
           <Button
-            onPress={status === "success" && taskId ? onSendCheck : handleRunCode}
+            onPress={status === "success" && taskId ? onSendCheck : onModalRunCode}
             disabled={isRunning}
             color={status === "success" && taskId ? 'secondary' : 'success'}
             className='w-full lg:w-auto text-white'
