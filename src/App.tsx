@@ -156,10 +156,20 @@ function App() {
   const isResizing = useRef(false); // Флаг изменения
   const containerRef = useRef<HTMLDivElement | null>(null); // Ссылка на контейнер
 
-  const handleMouseDown = (event: any) => {
+  // Для десктопа
+  const handleMouseDown = (event: React.MouseEvent) => {
     isResizing.current = true;
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("mouseup", handleMouseUp);
+  };
+
+  // Для мобильных
+  const handleTouchStart = (event: React.TouchEvent) => {
+    if (event.touches.length === 1) { // Обрабатываем только одно прикосновение
+      isResizing.current = true;
+      document.addEventListener("touchmove", handleTouchMove as EventListener); // Приводим тип
+      document.addEventListener("touchend", handleTouchEnd as EventListener); // Приводим тип
+    }
   };
 
   const handleMouseMove = (event: MouseEvent) => {
@@ -176,11 +186,34 @@ function App() {
     }
   };
 
+  // Мобильная версия для движения пальца
+  const handleTouchMove = (event: TouchEvent) => {
+    if (!isResizing.current) return;
+
+    if (containerRef.current) {
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const newHeight = event.touches[0].clientY - containerRect.top;
+
+      // Ограничиваем высоту в допустимых пределах
+      const minHeight = 100;
+      const maxHeight = 500;
+      setHeight(Math.max(minHeight, Math.min(maxHeight, newHeight)));
+    }
+  };
+
   const handleMouseUp = () => {
     isResizing.current = false;
     document.removeEventListener("mousemove", handleMouseMove);
     document.removeEventListener("mouseup", handleMouseUp);
   };
+
+  // Мобильная версия для завершения прикосновения
+  const handleTouchEnd = () => {
+    isResizing.current = false;
+    document.removeEventListener("touchmove", handleTouchMove as EventListener); // Приводим тип
+    document.removeEventListener("touchend", handleTouchEnd as EventListener); // Приводим тип
+  };
+
 
   return (
     <div className="min-h-screen h-screen flex flex-col bg-ide-background text-ide-text-primary">
@@ -214,55 +247,67 @@ function App() {
         </header>
       )}
 
-
       {task && (
-        <div ref={containerRef}
+      <div
+        ref={containerRef}
+        style={{
+          position: "relative", // Контейнер для абсолютного позиционирования полосы
+          height: `${height}px`,
+        }}
+        className={`flex-none bg-ide-secondary ${!isDesktop() ? "mt-[110px]" : ""} p-4 border-b border-ide-border max-h-[30dvh]`}
+      >
+        <div
           style={{
-            position: "relative",
-            height: `${height}px`,
-          }} className={`flex-none bg-ide-secondary ${!isDesktop() ? "mt-[110px]" : ""} p-4 border-b border-ide-border overflow-auto max-h-[30dvh]`}>
+            overflow: "auto", // Прокрутка только для контента
+            height: "100%",
+          }}
+        >
           <div className="container mx-auto">
             <div className="prose prose-invert max-w-none">
               <div dangerouslySetInnerHTML={{ __html: task.description }} />
               {task.answers && task.answers.length > 1 && (
                 <>
-                  {task.answers[0].input && <>
-                    <div>Входные данные:</div>
-                    <pre>{task.answers[0].input}</pre></>}
-
-                  <div className='mt-3'>Выходные данные:</div>
+                  {task.answers[0].input && (
+                    <>
+                      <div>Входные данные:</div>
+                      <pre>{task.answers[0].input}</pre>
+                    </>
+                  )}
+                  <div className="mt-3">Выходные данные:</div>
                   <pre>{task.answers[0].output}</pre>
                 </>
               )}
             </div>
           </div>
+        </div>
+
+        {/* Полоса для изменения высоты */}
+        <div
+          style={{
+            position: "absolute", // Абсолютное позиционирование относительно контейнера
+            bottom: 0, // Привязка к нижней границе контейнера
+            left: 0,
+            right: 0,
+            height: "8px",
+            cursor: "row-resize", // Изменение курсора при наведении
+          }}
+          onMouseDown={handleMouseDown} // Обработка зажима на ПК
+          onTouchStart={handleTouchStart} // Обработка зажима на мобильных устройствах
+        >
           <div
             style={{
-              position: "absolute",
-              bottom: 0,
-              left: 0,
-              right: 0,
-              height: "8px",
-              background: "none",
-              cursor: "row-resize",
-              borderRadius: "0 0 8px 8px",
-              boxShadow: "inset 0 -2px 4px rgba(0, 0, 0, 0.2)",
+              width: "60px",
+              height: "4px",
+              background: "#666",
+              margin: "2px auto",
+              borderRadius: "2px",
             }}
-            onMouseDown={handleMouseDown}
-          >
-            <div
-              style={{
-                width: "60px",
-                height: "4px",
-                background: "#666",
-                margin: "2px auto",
-                borderRadius: "2px",
-              }}
-            />
-          </div>
+          />
         </div>
-      )
-      }
+      </div>
+    )}
+
+
 
       <main className="flex-1 overflow-hidden">
         <div className="h-full flex flex-col md:flex-row">
