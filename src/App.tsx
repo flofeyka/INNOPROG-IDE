@@ -135,7 +135,7 @@ function App() {
       const result = await api.checkCode(checkData, language);
 
       if (result.result) {
-        setOutput(result.comment || 'Тест пройден успешно!');
+        setOutput(`Тест пройден успешно!\nРезультат программы: ${result.output}`);
         setStatus('success');
       } else {
         setOutput(
