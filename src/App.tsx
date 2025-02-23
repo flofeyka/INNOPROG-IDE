@@ -56,7 +56,7 @@ function App() {
         .then(taskData => {
           setTask(taskData);
           if (taskData.answers && taskData.answers.length > 0) {
-            setCurrentAnswer(taskData.answers[0]);
+            setCurrentAnswer({...taskData.answers[0], code_before: "# Напишите ваш код здесь\n\n"});
           }
 
           if (!answer_id) {
