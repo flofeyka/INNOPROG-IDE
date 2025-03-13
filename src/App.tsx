@@ -1,82 +1,108 @@
-import { Button, Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, Spinner, Textarea, useDisclosure } from '@heroui/react';
-import { useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { isDesktop } from '.';
-import './App.css';
-import CodeEditor from './components/CodeEditor';
-import { api } from './services/api';
-import { Answer, Task } from './types/task';
+import {
+  Button,
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  Spinner,
+  Switch,
+  Textarea,
+  useDisclosure,
+} from "@heroui/react";
+import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { isDesktop } from ".";
+import "./App.css";
+import CodeEditor from "./components/CodeEditor";
+import { api } from "./services/api";
+import { Answer, Task } from "./types/task";
 
 function App() {
   const [searchParams] = useSearchParams();
   const [task, setTask] = useState<Task | null>(null);
-  const [code, setCode] = useState<string>('');
-  const [output, setOutput] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'editor' | 'output'>('editor');
-  const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [code, setCode] = useState<string>("");
+  const [output, setOutput] = useState<string>("");
+  const [activeTab, setActiveTab] = useState<"editor" | "output">("editor");
+  const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const outputRef = useRef<HTMLPreElement>(null);
   const [currentAnswer, setCurrentAnswer] = useState<Answer | null>(null);
-  const [submitResult, setSubmitResult] = useState<"success" | "error" | "no_data">("success");
+  const [submitResult, setSubmitResult] = useState<
+    "success" | "error" | "no_data"
+  >("success");
   const [inputData, setInputData] = useState<string>("");
   const [outputData, setoutputData] = useState<string>("");
 
+  const [isOutputData, setIsOutputData] = useState<boolean>(true);
+  const [isInputData, setIsInputData] = useState<boolean>(false);
+
   const { onOpen, onOpenChange, isOpen, onClose } = useDisclosure();
 
-  const taskId = searchParams.get('task_id') || undefined;
-  const language = searchParams.get('lang') || 'py';
-  const answer_id = searchParams.get('answer_id');
-
+  const taskId = searchParams.get("task_id") || undefined;
+  const language = searchParams.get("lang") || "py";
+  const answer_id = searchParams.get("answer_id");
 
   const onSendCheck = async () => {
     setIsRunning(true);
-    const submittedCode = task?.answers && task.answers.length > 1 ? code : `${currentAnswer?.code_before ? currentAnswer.code_before : ''}${code}${currentAnswer?.code_after ? currentAnswer.code_after : ''}`;
+    const submittedCode =
+      task?.answers && task.answers.length > 1
+        ? code
+        : `${
+            currentAnswer?.code_before ? currentAnswer.code_before : ""
+          }${code}${currentAnswer?.code_after ? currentAnswer.code_after : ""}`;
     try {
       await api.submitCode({
         program: submittedCode,
         user_id: window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 429272623,
         answer_id: Number(answer_id) || 123,
-        task_id: Number(taskId)
+        task_id: Number(taskId),
       });
       setSubmitResult("success");
     } catch {
-      setSubmitResult("error")
-      setStatus('idle');
-      
+      setSubmitResult("error");
+      setStatus("idle");
     }
     onOpen();
 
     setIsRunning(false);
     await window.Telegram.WebApp.close();
-  }
+  };
 
   useEffect(() => {
     if (taskId) {
-      api.getTask(taskId)
-        .then(taskData => {
+      api
+        .getTask(taskId)
+        .then((taskData) => {
           setTask(taskData);
-          if (taskData.answers && taskData.answers.length > 0) {
-            setCurrentAnswer({...taskData.answers[0], code_before: "# Напишите ваш код здесь\n\n"});
+          if (taskData.answers && taskData.answers.length > 1) {
+            setCurrentAnswer({
+              ...taskData.answers[0],
+              // code_after: "# Напишите ваш код здесь\n\n",
+            });
           }
+          console.log(taskData);
 
           if (!answer_id) {
-            setCode('');
+            setCode("");
           }
         })
-        .catch(error => {
-          console.error('Failed to load task:', error);
+        .catch((error) => {
+          console.error("Failed to load task:", error);
         });
 
       if (answer_id) {
-        api.getSubmitCode(
-          answer_id,
-          window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 429272623,
-          Number(taskId)
-        ).then(data => {
-          if (data.code) {
-            setCode(data.code);
-          }
-        });
+        api
+          .getSubmitCode(
+            answer_id,
+            window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 429272623,
+            Number(taskId)
+          )
+          .then((data) => {
+            if (data.code) {
+              setCode(data.code);
+            }
+          });
       }
     }
   }, [taskId, answer_id]);
@@ -85,16 +111,36 @@ function App() {
 
   const getStatusIcon = () => {
     switch (status) {
-      case 'success':
+      case "success":
         return (
-          <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+          <svg
+            className="w-4 h-4 text-green-500"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M5 13l4 4L19 7"
+            />
           </svg>
         );
-      case 'error':
+      case "error":
         return (
-          <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+          <svg
+            className="w-4 h-4 text-red-500"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M6 18L18 6M6 6l12 12"
+            />
           </svg>
         );
       default:
@@ -103,13 +149,13 @@ function App() {
   };
 
   const onModalRunCode = async () => {
-    if (!currentAnswer || !taskId) {
+    if (!task?.answers?.length || !taskId) {
       setSubmitResult("no_data");
       onOpen();
     } else {
       await handleRunCode();
     }
-  }
+  };
 
   const handleRunCode = async () => {
     if (status === "success" && taskId) {
@@ -117,43 +163,64 @@ function App() {
       return;
     }
     setIsRunning(true);
-    setStatus('idle');
-    setOutput('');
+    setStatus("idle");
+    setOutput("");
 
     try {
-
-      const fullCode = `${currentAnswer?.code_before ? currentAnswer?.code_before : ''}${code}${currentAnswer?.code_after ? currentAnswer?.code_after : ''}`;
+      const fullCode = `${
+        currentAnswer?.code_before || task?.answers![0].code_before
+          ? task?.answers![0].code_before
+          : ""
+      }\n${code}\n${
+        currentAnswer?.code_after || task?.answers![0].code_after
+          ? task?.answers![0].code_after
+          : ""
+      }`;
 
       const checkData = {
         input_data: currentAnswer?.input || inputData || "-",
-        output_data: currentAnswer?.output || outputData || "-",
+        output_data:
+          task?.answers![0].output.trim() || outputData.trim() || "-",
         program: fullCode,
         test_number: -1,
-        timeout: currentAnswer?.timeout || 2
+        timeout: currentAnswer?.timeout || 2,
       };
 
       const result = await api.checkCode(checkData, language);
 
       if (result.result) {
-        setOutput(`Тест пройден успешно!\nРезультат программы: ${result.output}`);
-        setStatus('success');
-      } else {
+        if (!outputData && !taskId) {
+          setOutput(result.output!);
+          return;
+        }
         setOutput(
-          `Ошибка: ${result.comment || 'Неверный результат'}${result.output !== "error" ? `\nПолучено: ${result.output}\nОжидалось: ${currentAnswer?.output || outputData}` : ''
+          `Тест пройден успешно!\n${
+            task?.answers?.length! > 1
+              ? `Результат программы: ${result.output}`
+              : ""
           }`
         );
-        setStatus('error');
+        setStatus("success");
+      } else {
+        setOutput(
+          `Ошибка: ${result.comment || "Неверный результат"}${
+            result.output !== "error"
+              ? `\nПолучено: ${result.output}\nОжидалось: ${
+                  task?.answers![0]?.output || outputData.trim()
+                }`
+              : ""
+          }`
+        );
+        setStatus("error");
       }
-
     } catch (error: any) {
       setOutput(`Ошибка выполнения: ${error.message}`);
-      setStatus('error');
+      setStatus("error");
     } finally {
       setIsRunning(false);
       if (window.innerWidth < 768) {
-        setActiveTab('output');
+        setActiveTab("output");
       }
-
     }
   };
 
@@ -173,10 +240,13 @@ function App() {
 
   // Для мобильных
   const handleTouchStart = (event: React.TouchEvent) => {
-    if (event.touches.length === 1) { // Обрабатываем только одно прикосновение
+    if (event.touches.length === 1) {
+      // Обрабатываем только одно прикосновение
       isResizing.current = true;
       startTouchY.current = event.touches[0].clientY; // Сохраняем начальную точку
-      document.addEventListener("touchmove", handleTouchMove, { passive: false });
+      document.addEventListener("touchmove", handleTouchMove, {
+        passive: false,
+      });
       document.addEventListener("touchend", handleTouchEnd);
       document.body.style.overflow = "hidden"; // Блокируем прокрутку во время изменения
     }
@@ -206,7 +276,7 @@ function App() {
 
       // Ограничиваем высоту в допустимых пределах
       const minHeight = 10;
-      const maxHeight = windowHeight - 200
+      const maxHeight = windowHeight - 200;
       setHeight(Math.max(minHeight, Math.min(maxHeight, newHeight)));
 
       // Чтобы блокировать прокрутку на iOS
@@ -229,27 +299,79 @@ function App() {
     document.body.style.overflow = ""; // Разблокировать прокрутку
   };
 
-
   return (
     <div className="min-h-screen h-screen flex flex-col bg-ide-background text-ide-text-primary">
-      <Modal onOpenChange={onOpenChange} isOpen={isOpen} >
+      <Modal onOpenChange={onOpenChange} isOpen={isOpen}>
         <ModalContent>
-          {submitResult === "no_data" && <ModalHeader>Введите данные</ModalHeader>}
+          {submitResult === "no_data" && (
+            <ModalHeader>Введите данные</ModalHeader>
+          )}
           <ModalBody>
-            <div className='text-center text-3xl'>{submitResult === "success" ? "✅Все тесты прошли успешно!" : submitResult === "error" ? "❌Неверное решение." : <div className='flex flex-col gap-2'>
-              <Textarea value={inputData} label='Входные данные' onChange={(e) => setInputData(e.target.value)} />
-              <Textarea value={outputData} label='Выходные данные' onChange={(e) => setoutputData(e.target.value)} />
-            </div>}</div>
+            <div className="text-center text-3xl">
+              {submitResult === "success" ? (
+                "✅Все тесты прошли успешно!"
+              ) : submitResult === "error" ? (
+                "❌Неверное решение."
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <div className="text-[15px] flex items-center gap-2">
+                    <Switch
+                      size="sm"
+                      color="secondary"
+                      isSelected={isInputData}
+                      onValueChange={setIsInputData}
+                    />{" "}
+                    Входные данные
+                  </div>
+                  {isInputData && (
+                    <Textarea
+                      value={inputData}
+                      label="Входные данные"
+                      onChange={(e) => setInputData(e.target.value)}
+                    />
+                  )}
+                  <div className="text-[15px] flex items-center gap-2">
+                    <Switch
+                      size="sm"
+                      color="secondary"
+                      isSelected={isOutputData}
+                      onValueChange={setIsOutputData}
+                    />
+                    Выходные данные
+                  </div>
+                  {isOutputData && (
+                    <Textarea
+                      value={outputData}
+                      label="Выходные данные"
+                      onChange={(e) => setoutputData(e.target.value)}
+                    />
+                  )}{" "}
+                </div>
+              )}
+            </div>
           </ModalBody>
-          <ModalFooter className='flex justify-center w-full'>
-            <Button size="lg" disabled={isRunning} onPress={async () => {
-              if (submitResult === "no_data" && outputData) {
-                await handleRunCode();
-              }
-              onClose()
-            }} className='w-full' color={submitResult === "no_data" ? "secondary" : "danger"}> {submitResult === "no_data" ? <div className='flex gap-2 items-center'>
-              {isRunning && <Spinner />} Применить
-            </div> : "Закрыть"}</Button>
+          <ModalFooter className="flex justify-center w-full">
+            <Button
+              size="lg"
+              disabled={isRunning}
+              onPress={async () => {
+                if (submitResult === "no_data") {
+                  await handleRunCode();
+                }
+                onClose();
+              }}
+              className="w-full"
+              color={submitResult === "no_data" ? "secondary" : "danger"}
+            >
+              {" "}
+              {submitResult === "no_data" ? (
+                <div className="flex gap-2 items-center">
+                  {isRunning && <Spinner />} Применить
+                </div>
+              ) : (
+                "Закрыть"
+              )}
+            </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
@@ -306,7 +428,7 @@ function App() {
                 right: 0,
                 height: "8px",
                 cursor: "row-resize", // Изменение курсора при наведении
-                userSelect: "none"
+                userSelect: "none",
               }}
               onMouseDown={handleMouseDown} // Обработка зажима на ПК
               onTouchStart={handleTouchStart} // Обработка зажима на мобильных устройствах
@@ -318,7 +440,7 @@ function App() {
                   background: "#666",
                   margin: "2px auto",
                   borderRadius: "2px",
-                  zIndex: "999"
+                  zIndex: "999",
                 }}
               />
             </div>
@@ -326,44 +448,54 @@ function App() {
         )}
       </div>
 
-
-
       <main className="flex-1 overflow-hidden">
         <div className="h-full flex flex-col md:flex-row">
           <div
-            className={`h-full md:w-1/2 p-4 ${activeTab === 'editor' ? 'block' : 'hidden md:block'
-              }`}
+            className={`h-full md:w-1/2 p-4 ${
+              activeTab === "editor" ? "block" : "hidden md:block"
+            }`}
           >
             <CodeEditor
               value={code}
               onChange={setCode}
               language={language}
-              codeBefore={currentAnswer?.code_before || ''}
-              codeAfter={currentAnswer?.code_after || ''}
-              readOnly={task?.type === 'Дополнение кода' ?
-                (currentAnswer ? false : true) :
-                false
+              codeBefore={currentAnswer?.code_before || ""}
+              codeAfter={currentAnswer?.code_after || ""}
+              readOnly={
+                task?.type === "Дополнение кода" && task.answers!.length > 1
+                  ? currentAnswer
+                    ? false
+                    : true
+                  : false
               }
             />
           </div>
 
           <div
-            className={`h-full md:w-1/2 ${activeTab === 'output' ? 'block' : 'hidden md:block'
-              }`}
+            className={`h-full md:w-1/2 ${
+              activeTab === "output" ? "block" : "hidden md:block"
+            }`}
           >
             <div className="h-full p-4">
               <div className="flex flex-col h-full bg-ide-editor rounded-lg overflow-hidden">
                 <div className="bg-ide-secondary px-3 py-2 border-b border-ide-border flex items-center justify-between">
-                  <span className="text-ide-text-secondary text-sm">Output</span>
+                  <span className="text-ide-text-secondary text-sm">
+                    Output
+                  </span>
                   {getStatusIcon()}
                 </div>
                 <div className="flex-1 p-4 overflow-auto">
                   <pre
                     ref={outputRef}
-                    className={`font-mono text-sm md:text-base whitespace-pre-wrap break-words ${status === 'error' ? 'error-output' : status === "success" ? "text-green-500" : ""
-                      }`}
+                    className={`font-mono text-sm md:text-base whitespace-pre-wrap break-words ${
+                      status === "error"
+                        ? "error-output"
+                        : status === "success"
+                        ? "text-green-500"
+                        : ""
+                    }`}
                   >
-                    {output || 'Нет результата'}
+                    {output || "Нет результата"}
                   </pre>
                 </div>
               </div>
@@ -372,38 +504,83 @@ function App() {
         </div>
       </main>
 
-      <footer className={`bg-ide-secondary  ${!isDesktop() ? "mb-[15px]" : ""} border-t border-ide-border flex-none`}>
+      <footer
+        className={`bg-ide-secondary  ${
+          !isDesktop() ? "mb-[15px]" : ""
+        } border-t border-ide-border flex-none`}
+      >
         <div className="container mx-auto px-4 py-3 md:py-4 flex items-center lg:flex-row flex-col gap-3 ">
           <Button
-            onPress={status === "success" && taskId ? onSendCheck : onModalRunCode}
+            onPress={
+              status === "success" && taskId ? onSendCheck : onModalRunCode
+            }
             disabled={isRunning}
-            color={status === "success" && taskId ? 'secondary' : 'success'}
-            className='w-full lg:w-auto text-white'
-          // className={`w-full md:w-auto ${status !== "success" ? "bg-ide-button-primary" : "bg-[#9C78FF]"} ${status === "success" ? "" : "hover:bg-ide-button-primary-hover"}  text-ide-text-primary font-medium px-6 py-2.5 rounded transition-colors flex items-center justify-center gap-2 ${isRunning ? 'opacity-50 cursor-not-allowed' : ''
-          //   }`}
+            color={status === "success" && taskId ? "secondary" : "success"}
+            className="w-full lg:w-auto text-white"
+            // className={`w-full md:w-auto ${status !== "success" ? "bg-ide-button-primary" : "bg-[#9C78FF]"} ${status === "success" ? "" : "hover:bg-ide-button-primary-hover"}  text-ide-text-primary font-medium px-6 py-2.5 rounded transition-colors flex items-center justify-center gap-2 ${isRunning ? 'opacity-50 cursor-not-allowed' : ''
+            //   }`}
           >
             {isRunning ? (
               <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                  fill="none"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                />
               </svg>
             ) : (
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
               </svg>
             )}
-            {status === "success" && taskId ? "Отправить на проверку" : isRunning ? 'Выполняется...' : 'Выполнить'}
+            {status === "success" && taskId
+              ? "Отправить на проверку"
+              : isRunning
+              ? "Выполняется..."
+              : "Выполнить"}
           </Button>
-          {activeTab === "output" && <div className='lg:hidden w-full md:hidden'>
-            <Button onPress={() => {
-              setActiveTab("editor")
-              setStatus("idle");
-              }} color='danger' className={`w-full`}>Попробовать снова</Button>
-          </div>}
+          {activeTab === "output" && (
+            <div className="lg:hidden w-full md:hidden">
+              <Button
+                onPress={() => {
+                  setActiveTab("editor");
+                  setStatus("idle");
+                }}
+                color="danger"
+                className={`w-full`}
+              >
+                Попробовать снова
+              </Button>
+            </div>
+          )}
         </div>
       </footer>
-    </div >
+    </div>
   );
 }
 
