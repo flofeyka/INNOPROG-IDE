@@ -34,8 +34,8 @@ function App() {
   const [inputData, setInputData] = useState<string>("");
   const [outputData, setoutputData] = useState<string>("");
 
-  const [isOutputData, setIsOutputData] = useState<boolean>(true);
-  const [isInputData, setIsInputData] = useState<boolean>(false);
+  const [isOutputData, setIsOutputData] = useState<boolean>(false);
+  const [isInputData, setIsInputData] = useState<boolean>(true);
 
   const { onOpen, onOpenChange, isOpen, onClose } = useDisclosure();
 
