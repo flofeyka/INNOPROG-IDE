@@ -267,6 +267,9 @@ const Header: React.FC<IProps> = ({
 											{Object.entries(roomPermissions).map(([key, value]) => (
 												<div
 													key={key}
+													title={
+														!isTeacher ? "Доступно только учителю!" : undefined
+													}
 													className={`flex items-center justify-between p-3 rounded-lg bg-ide-secondary hover:bg-ide-editor transition-all duration-300 border border-ide-border`}
 												>
 													<div className="flex items-center gap-3">
@@ -282,37 +285,29 @@ const Header: React.FC<IProps> = ({
 													<Switch
 														isDisabled={!isTeacher}
 														color="secondary"
-														onClick={() =>
+														isSelected={
+															roomPermissions[key as keyof RoomPermissions]
+														}
+														onValueChange={(value) =>
 															handlePermissionChange(
 																key as keyof RoomPermissions,
-																!value
+																value
 															)
 														}
 													/>
 												</div>
 											))}
-											<Button
-												className="w-full disabled:opacity-60"
-												disabled={!isTeacher}
-												color="danger"
-												size="lg"
-												onPress={onCompleteSession}
-											>
-												Завершить сессию
-											</Button>
-										</div>
-
-										{/* Подвал карточки */}
-										<div className="mt-4 pt-3 border-t border-ide-border flex justify-between items-center">
-											<span className="text-xs text-ide-text-secondary">
-												Настройки применяются мгновенно
-											</span>
-											<button
-												onClick={() => setShowPermissionsCard(false)}
-												className="text-xs text-secondary-400 hover:text-secondary-500 transition-colors duration-200 hover:underline"
-											>
-												Закрыть
-											</button>
+											{isTeacher && (
+												<Button
+													className="w-full disabled:opacity-60"
+													disabled={!isTeacher}
+													color="danger"
+													size="lg"
+													onPress={onCompleteSession}
+												>
+													Завершить сессию
+												</Button>
+											)}
 										</div>
 									</div>
 								</div>

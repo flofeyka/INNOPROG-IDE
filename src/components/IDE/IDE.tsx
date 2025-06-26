@@ -5,6 +5,7 @@ import { useCodeExecution } from "../../hooks/useCodeExecution";
 import { api } from "../../services/api";
 import { Answer, Task } from "../../types/task";
 
+import { Socket } from "socket.io-client";
 import CodeEditorSection from "../CodeEditorSection/CodeEditorSection";
 import Footer from "../Footer/Footer";
 import Header from "../Header/Header";
@@ -47,7 +48,7 @@ interface RoomPermissions {
 }
 
 interface WebSocketData {
-	socket: WebSocket | null;
+	socket: Socket | null;
 	isConnected: boolean;
 	isJoinedRoom: boolean;
 	connectionError: string | null;
@@ -85,6 +86,7 @@ interface WebSocketData {
 	sendRoomPermissions: (permissions: RoomPermissions) => void;
 	activeTypers: Set<string>;
 	markUserAsTyping: (telegramId: string) => void;
+	completed: boolean;
 }
 
 interface IDEProps {
@@ -351,6 +353,7 @@ const IDE: React.FC<IDEProps> = React.memo(({ webSocketData }) => {
 				searchParams.get("telegramId") ||
 				window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString() ||
 				"1234567890",
+			completed: webSocketData.completed,
 		};
 	}, [
 		webSocketData?.sendSelection,

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import { Socket } from "socket.io-client";
 import "./Cursor.css";
 
 interface RoomMember {
@@ -17,7 +18,7 @@ interface CursorData {
 }
 
 interface WebSocketData {
-	socket: WebSocket | null;
+	socket: Socket | null;
 	isConnected: boolean;
 	isJoinedRoom: boolean;
 	roomMembers: RoomMember[];

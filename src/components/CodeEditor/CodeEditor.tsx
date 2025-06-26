@@ -1,15 +1,14 @@
 import { defaultKeymap } from "@codemirror/commands";
 import { javascript } from "@codemirror/lang-javascript";
 import { python } from "@codemirror/lang-python";
-import { EditorState } from "@codemirror/state";
+import { EditorState, StateEffect, StateField } from "@codemirror/state";
 import { oneDark } from "@codemirror/theme-one-dark";
 import {
-	EditorView,
-	keymap,
 	Decoration,
 	DecorationSet,
+	EditorView,
+	keymap,
 } from "@codemirror/view";
-import { StateField, StateEffect } from "@codemirror/state";
 import React, { useEffect, useRef } from "react";
 
 interface CodeEditorProps {
@@ -60,6 +59,7 @@ interface CodeEditorProps {
 	// Информация о том, кто сейчас печатает
 	activeTypers?: Set<string>;
 	myTelegramId?: string;
+	completed: boolean;
 }
 
 // Effect для замены всех выделений
@@ -117,6 +117,7 @@ const CodeEditor: React.FC<CodeEditorProps> = React.memo(
 		codeEdits,
 		activeTypers,
 		myTelegramId,
+		completed,
 	}) => {
 		const editor = useRef<EditorView>();
 		const editorContainer = useRef<HTMLDivElement>(null);
@@ -210,7 +211,8 @@ const CodeEditor: React.FC<CodeEditorProps> = React.memo(
 		);
 
 		// Комбинируем блокировку с оригинальным readOnly
-		const effectiveReadOnly = readOnly || isEditorBlocked;
+		// const effectiveReadOnly = readOnly || isEditorBlocked;
+		const effectiveReadOnly = readOnly || completed;
 
 		// Обновляем выделения других пользователей
 		useEffect(() => {
@@ -612,11 +614,11 @@ const CodeEditor: React.FC<CodeEditorProps> = React.memo(
 					<span className="text-ide-text-secondary text-sm">
 						{language === "py" ? "script.py" : "script.js"}
 					</span>
-					{isEditorBlocked && (
+					{/* {isEditorBlocked && (
 						<span className="ml-2 text-yellow-500 text-xs">
 							🔒 Кто-то печатает...
 						</span>
-					)}
+					)} */}
 				</div>
 				<div
 					ref={editorContainer}
