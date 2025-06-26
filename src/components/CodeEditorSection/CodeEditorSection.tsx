@@ -1,6 +1,6 @@
 import React from "react";
-import CodeEditor from "../CodeEditor/CodeEditor";
 import type { Answer, Task } from "../../types/task";
+import CodeEditor from "../CodeEditor/CodeEditor";
 
 interface CodeEditorSectionProps {
 	code: string;
@@ -45,6 +45,7 @@ interface CodeEditorSectionProps {
 		>;
 		activeTypers: Set<string>;
 		myTelegramId: string;
+		completed: boolean;
 	};
 }
 
@@ -83,6 +84,7 @@ const CodeEditorSection: React.FC<CodeEditorSectionProps> = React.memo(
 					codeEdits={webSocketData?.codeEdits}
 					activeTypers={webSocketData?.activeTypers}
 					myTelegramId={webSocketData?.myTelegramId}
+					completed={webSocketData?.completed ?? false}
 				/>
 			</div>
 		);

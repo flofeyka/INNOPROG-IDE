@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { redirect, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
+import { io, Socket } from "socket.io-client";
 
 interface UseWebSocketProps {
 	socketUrl: string;
@@ -74,6 +75,7 @@ export const useWebSocket = ({
 		studentEditCodeEnabled: true,
 	});
 	const [isTeacher, setIsTeacher] = useState<boolean>(false);
+	const [completed, setCompleted] = useState<boolean>(false);
 
 	// Отслеживание активных печатающих пользователей
 	const [activeTypers, setActiveTypers] = useState<Set<string>>(new Set());
@@ -82,18 +84,18 @@ export const useWebSocket = ({
 	const [searchParams] = useSearchParams();
 
 	// Refs для стабильных значений
-	const socketRef = useRef<WebSocket | null>(null);
-	const socketUrlRef = useRef(socketUrl);
-	const myTelegramIdRef = useRef(myTelegramId);
+	const socketRef = useRef<Socket | null>(null);
+	const socketUrlRef = useRef<string>(socketUrl);
+	const myTelegramIdRef = useRef<string>(myTelegramId);
 	const roomIdRef = useRef(roomId);
-	const isConnectedRef = useRef(false);
-	const shouldReconnectRef = useRef(true);
+	const isConnectedRef = useRef<boolean>(false);
+	const shouldReconnectRef = useRef<boolean>(true);
 	const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 	const pingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 	const heartbeatTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-	const connectionAttempts = useRef(0);
-	const lastConnectionTime = useRef(0);
-	const maxRetriesBeforeError = useRef(3); // Максимум попыток перед показом ошибки
+	const connectionAttempts = useRef<number>(0);
+	const lastConnectionTime = useRef<number>(0);
+	const maxRetriesBeforeError = useRef<number>(3); // Максимум попыток перед показом ошибки
 
 	// State для принудительного переподключения
 	const [forceReconnectTrigger, setForceReconnectTrigger] = useState(0);
@@ -122,16 +124,17 @@ export const useWebSocket = ({
 			return;
 		}
 
-		if (socketRef.current?.readyState === WebSocket.OPEN) {
+		if (socketRef.current?.connected) {
 			// Проверяем localStorage на наличие сохраненного имени
 			const savedUsername = localStorage.getItem("innoprog-username");
 
-			const joinMessage = `42["join-room",${JSON.stringify({
+			// Отправляем событие join-room с данными
+			socketRef.current.emit("join-room", {
 				telegramId: myTelegramIdRef.current,
 				roomId: roomIdRef.current,
 				username: savedUsername || undefined,
-			})}]`;
-			socketRef.current.send(joinMessage);
+			});
+
 			console.log(
 				"🏠 Joining room:",
 				roomIdRef.current,
@@ -142,41 +145,42 @@ export const useWebSocket = ({
 	}, []);
 
 	const completeSession = useCallback(() => {
-		if (!roomIdRef.current) return;
-
-		if (socketRef.current?.readyState === WebSocket.OPEN) {
-			const completeMessage = `42["close-session",${JSON.stringify({
+		if (completed) return;
+		if (socketRef.current) {
+			socketRef.current?.emit("close-session", {
 				telegramId: myTelegramIdRef.current,
 				roomId: roomIdRef.current,
-			})}]`;
-			socketRef.current.send(completeMessage);
-			console.log("📤 Sent complete session message:", completeMessage);
+			});
 		}
-	}, []);
+	}, [completed]);
 
 	// Функция для отметки пользователя как печатающего
-	const markUserAsTyping = useCallback((telegramId: string) => {
-		setActiveTypers((prev) => {
-			const newSet = new Set(prev);
-			newSet.add(telegramId);
-			return newSet;
-		});
-
-		if (typingTimeouts.current.has(telegramId)) {
-			clearTimeout(typingTimeouts.current.get(telegramId)!);
-		}
-
-		const timeout = setTimeout(() => {
+	const markUserAsTyping = useCallback(
+		(telegramId: string) => {
+			if (completed) return;
 			setActiveTypers((prev) => {
 				const newSet = new Set(prev);
-				newSet.delete(telegramId);
+				newSet.add(telegramId);
 				return newSet;
 			});
-			typingTimeouts.current.delete(telegramId);
-		}, 2000);
 
-		typingTimeouts.current.set(telegramId, timeout);
-	}, []);
+			if (typingTimeouts.current.has(telegramId)) {
+				clearTimeout(typingTimeouts.current.get(telegramId)!);
+			}
+
+			const timeout = setTimeout(() => {
+				setActiveTypers((prev) => {
+					const newSet = new Set(prev);
+					newSet.delete(telegramId);
+					return newSet;
+				});
+				typingTimeouts.current.delete(telegramId);
+			}, 2000);
+
+			typingTimeouts.current.set(telegramId, timeout);
+		},
+		[completed]
+	);
 
 	// Стабильная функция подключения (мемоизированная)
 	const connectWebSocket = useCallback(() => {
@@ -213,10 +217,7 @@ export const useWebSocket = ({
 		lastConnectionTime.current = now;
 
 		// Закрываем предыдущее соединение
-		if (
-			socketRef.current &&
-			socketRef.current.readyState !== WebSocket.CLOSED
-		) {
+		if (socketRef.current && !socketRef.current.disconnected) {
 			socketRef.current.close();
 		}
 
@@ -232,17 +233,13 @@ export const useWebSocket = ({
 			wsUrl = `ws://${currentSocketUrl}`;
 		}
 
-		const fullWsUrl = `${wsUrl}/socket.io/?EIO=4&transport=websocket&t=${Date.now()}`;
-
-		console.log(
-			`🔌 Connecting to WebSocket (attempt ${connectionAttempts.current + 1}):`,
-			{ originalUrl: currentSocketUrl, wsUrl, fullWsUrl }
-		);
-
-		const socket = new WebSocket(fullWsUrl);
+		const socket = io(wsUrl, {
+			transports: ["websocket"],
+			reconnection: true,
+		});
 		socketRef.current = socket;
 
-		socket.onopen = () => {
+		socket.on("connect", () => {
 			console.log("🟢 WebSocket connected successfully");
 			setIsConnected(true);
 			setConnectionError(null); // Очищаем ошибку при успешном подключении
@@ -255,374 +252,317 @@ export const useWebSocket = ({
 
 			// Присоединяемся к комнате
 			setTimeout(joinRoom, 100);
+		});
 
-			// Запускаем ping/pong (каждые 60 секунд)
-			const sendPing = () => {
-				if (socket.readyState === WebSocket.OPEN) {
-					socket.send("2");
-					console.log("📤 Sent ping");
-
-					// Ожидаем pong в течение 10 секунд
-					heartbeatTimeoutRef.current = setTimeout(() => {
-						console.log("💔 No pong received, closing connection");
-						socket.close(1000, "No pong received");
-					}, 10000);
-				}
-			};
-
-			pingIntervalRef.current = setInterval(sendPing, 60000);
-		};
-
-		socket.onclose = (event) => {
-			console.log("🔴 WebSocket disconnected:", {
-				code: event.code,
-				reason: event.reason,
-				wasClean: event.wasClean,
+		socketRef.current?.on("disconnect", (reason) => {
+			console.log("🔴 Socket.IO disconnected:", {
+				reason,
 				timestamp: new Date().toISOString(),
 			});
+
 			setIsConnected(false);
 			setIsJoinedRoom(false);
-
 			isConnectedRef.current = false;
 			clearIntervals();
 
-			// Переподключение только если есть roomId и переподключение разрешено
+			// Проверяем, нужно ли переподключаться
 			if (shouldReconnectRef.current && currentRoomId) {
 				connectionAttempts.current++;
 
-				// ✅ ИСПРАВЛЕНО: Показываем ошибку только после нескольких неудачных попыток
+				// Показываем ошибку после нескольких попыток
 				if (connectionAttempts.current > maxRetriesBeforeError.current) {
-					if (event.code !== 1000) {
-						// Не обычное закрытие и превышен лимит попыток
+					// В socket.io нет кода 1000, но можно исключить нормальное отключение
+					if (
+						reason !== "io client disconnect" &&
+						reason !== "io server disconnect"
+					) {
 						setConnectionError("Не удается подключиться к серверу");
 					}
 				} else {
-					// Еще есть попытки - не показываем ошибку, остаемся в режиме загрузки
 					setConnectionError(null);
 				}
 
-				const delay = 2000; // ✅ Все попытки переподключения через 2 секунды
-
+				const delay = 2000;
 				console.log(
-					`🔄 Reconnecting in 2s (attempt ${connectionAttempts.current}/${maxRetriesBeforeError.current}) for room ${currentRoomId}`
+					`🔄 Reconnecting in ${delay / 1000}s (attempt ${
+						connectionAttempts.current
+					}/${maxRetriesBeforeError.current}) for room ${currentRoomId}`
 				);
-				reconnectTimeoutRef.current = setTimeout(connectWebSocket, delay);
+
+				reconnectTimeoutRef.current = setTimeout(() => {
+					// Вручную отключаем старое соединение и создаём новое
+					socketRef.current?.disconnect();
+					socketRef.current = io("wss://your-server.com", {
+						transports: ["websocket"],
+						reconnection: false, // выключаем авто переподключение, т.к. делаем вручную
+					});
+					connectWebSocket(); // твоя функция инициализации сокета, переиспользуй её
+				}, delay);
 			} else {
 				console.log("❌ Not reconnecting: no room or reconnection disabled");
 			}
-		};
+		});
 
-		socket.onerror = (error) => {
-			console.error("❌ WebSocket error:", {
-				error,
-				url: fullWsUrl,
-				readyState: socket.readyState,
-				timestamp: new Date().toISOString(),
-				attempt: connectionAttempts.current + 1,
-			});
+		socket.on("connect_error", (error) => {
 			setIsConnected(false);
 
-			// ✅ ИСПРАВЛЕНО: Не устанавливаем ошибку сразу
-			// Ошибка будет установлена в onclose только после превышения лимита попыток
-			// setConnectionError("Ошибка подключения к серверу");
-
 			isConnectedRef.current = false;
-		};
+		});
 
-		socket.onmessage = (event) => {
-			const message = event.data;
+		socket.on("joined", (eventData) => {
+			console.log("✅ Successfully joined room:", eventData);
 
-			// Обрабатываем Engine.IO pong
-			if (message === "3") {
-				console.log("📥 Received pong");
-				// Очищаем timeout ожидания pong
-				if (heartbeatTimeoutRef.current) {
-					clearTimeout(heartbeatTimeoutRef.current);
-					heartbeatTimeoutRef.current = null;
-				}
-				return;
+			setIsJoinedRoom(true);
+			setCompleted(eventData.completed);
+			setMyUserColor(eventData.userColor || "#FF6B6B");
+			setIsTeacher(eventData.isTeacher || false);
+
+			if (eventData.roomPermissions) {
+				setRoomPermissions(eventData.roomPermissions);
 			}
 
-			// Обрабатываем Socket.IO сообщения
-			if (message.startsWith("42[")) {
-				try {
-					const data = JSON.parse(message.slice(2));
-					const eventName = data[0];
-					const eventData = data[1];
+			if (eventData.currentCursors) {
+				setCursors(
+					new Map(
+						eventData.currentCursors.map((cursor: CursorData) => [
+							cursor.telegramId,
+							cursor,
+						])
+					)
+				);
+			}
 
-					console.log("📥 Received WebSocket message:", eventName, eventData);
-
-					switch (eventName) {
-						case "joined":
-							console.log("✅ Successfully joined room:", eventData);
-							setIsJoinedRoom(true);
-							setMyUserColor(eventData.userColor || "#FF6B6B");
-							setIsTeacher(eventData.isTeacher || false);
-							if (eventData.roomPermissions) {
-								setRoomPermissions(eventData.roomPermissions);
-							}
-							if (eventData.currentCursors) {
-								setCursors(
-									new Map(
-										eventData.currentCursors.map((cursor: CursorData) => [
-											cursor.telegramId,
-											cursor,
-										])
-									)
-								);
-							}
-							if (eventData.currentSelections) {
-								const selectionsMap = new Map();
-								eventData.currentSelections.forEach((selection: any) => {
-									if (selection.telegramId !== myTelegramIdRef.current) {
-										selectionsMap.set(selection.telegramId, {
-											line: selection.line,
-											column: selection.column,
-											selectionStart: selection.selectionStart,
-											selectionEnd: selection.selectionEnd,
-											selectedText: selection.selectedText,
-											userColor: selection.userColor || "#FF6B6B",
-											username: selection.username,
-										});
-									}
-								});
-								setSelections(selectionsMap);
-								console.log("📍 Loaded initial selections:", selectionsMap);
-							}
-							break;
-
-						case "members-updated":
-							console.log("👥 Members updated:", eventData);
-							const members = eventData.members || [];
-							setRoomMembers(members);
-							break;
-
-						case "member-left":
-							console.log("👋 Member left:", eventData.telegramId);
-							// Очищаем курсор и выделения при выходе
-							if (!eventData.keepCursor) {
-								setCursors((prev) => {
-									const newCursors = new Map(prev);
-									newCursors.delete(eventData.telegramId);
-									return newCursors;
-								});
-							} else {
-								setCursors((prev) => {
-									const newCursors = new Map(prev);
-									const existingCursor = newCursors.get(eventData.telegramId);
-									if (existingCursor) {
-										newCursors.set(eventData.telegramId, {
-											...existingCursor,
-											isOffline: true,
-										} as any);
-									}
-									return newCursors;
-								});
-							}
-
-							// Очищаем выделения пользователя при выходе
-							setSelections((prev) => {
-								const newSelections = new Map(prev);
-								newSelections.delete(eventData.telegramId);
-								return newSelections;
-							});
-							break;
-
-						case "cursor-action":
-							if (eventData.telegramId !== myTelegramIdRef.current) {
-								console.log("👆 Cursor update:", {
-									telegramId: eventData.telegramId,
-									username: eventData.username,
-									position: eventData.position,
-									userColor: eventData.userColor,
-								});
-								setCursors((prev) => {
-									const newCursors = new Map(prev);
-									newCursors.set(eventData.telegramId, {
-										telegramId: eventData.telegramId,
-										position: eventData.position,
-										userColor: eventData.userColor,
-										username: eventData.username,
-									});
-									return newCursors;
-								});
-							}
-							break;
-
-						case "selection-state":
-							console.log("📍 Received selection state:", eventData);
-
-							// Полностью заменяем выделения новым состоянием с сервера
-							const newSelections = new Map();
-							eventData.selections.forEach((selection: any) => {
-								if (
-									selection.telegramId &&
-									selection.telegramId !== myTelegramIdRef.current
-								) {
-									newSelections.set(selection.telegramId, {
-										line: selection.line,
-										column: selection.column,
-										selectionStart: selection.selectionStart,
-										selectionEnd: selection.selectionEnd,
-										selectedText: selection.selectedText,
-										userColor: selection.userColor || "#FF6B6B",
-										username: selection.username,
-									});
-								}
-							});
-
-							setSelections(newSelections);
-							console.log("📍 Updated selections map:", newSelections);
-							break;
-
-						case "complete-session":
-							console.log("🏁 Session completed:", eventData.message);
-
-							toast(eventData.message);
-
-							setTimeout(() => {
-								const url = new URL(window.location.href);
-								url.search = ""; // Очищаем все search параметры
-
-								window.location.href = url.origin + url.pathname;
-							}, 2000);
-							break;
-
-						case "code-edit-action":
-							if (eventData.telegramId !== myTelegramIdRef.current) {
-								console.log(
-									"📝 Received code edit from:",
-									eventData.telegramId
-								);
-								markUserAsTyping(eventData.telegramId);
-
-								setCodeEdits((prev) => {
-									const newCodeEdits = new Map(prev);
-									newCodeEdits.set(eventData.telegramId, {
-										telegramId: eventData.telegramId,
-										changes: eventData.changes,
-										newCode: eventData.newCode,
-										userColor: eventData.userColor,
-										username: eventData.username,
-										timestamp: eventData.timestamp,
-									});
-									return newCodeEdits;
-								});
-							}
-							break;
-
-						case "code-edit-confirmed":
-							console.log(
-								"✅ Code edit confirmed at:",
-								new Date(eventData.timestamp)
-							);
-							break;
-
-						case "room-edited":
-							console.log("🏠 Room settings updated:", eventData);
-							// Обновляем разрешения комнаты из события room-edited
-							if (
-								eventData.studentCursorEnabled !== undefined &&
-								eventData.studentSelectionEnabled !== undefined &&
-								eventData.studentEditCodeEnabled !== undefined
-							) {
-								setRoomPermissions({
-									studentCursorEnabled: eventData.studentCursorEnabled,
-									studentSelectionEnabled: eventData.studentSelectionEnabled,
-									studentEditCodeEnabled: eventData.studentEditCodeEnabled,
-								});
-								console.log("🔧 Room permissions updated:", {
-									studentCursorEnabled: eventData.studentCursorEnabled,
-									studentSelectionEnabled: eventData.studentSelectionEnabled,
-									studentEditCodeEnabled: eventData.studentEditCodeEnabled,
-								});
-							}
-							break;
-
-						case "room-state-loaded":
-							console.log("🔄 Room state loaded from DB:", eventData);
-							// Уведомляем о загруженном состоянии
-							window.dispatchEvent(
-								new CustomEvent("roomStateLoaded", {
-									detail: {
-										lastCode: eventData.lastCode,
-										participantCount: eventData.participantCount,
-									},
-								})
-							);
-							break;
-
-						case "clear-user-selections":
-							console.log(
-								"🧹 Clearing selections for user:",
-								eventData.telegramId
-							);
-							if (eventData.telegramId !== myTelegramIdRef.current) {
-								setSelections((prev) => {
-									const newSelections = new Map(prev);
-									newSelections.delete(eventData.telegramId);
-									return newSelections;
-								});
-							}
-							break;
-
-						case "room-sound":
-							console.log("🔊 Received room sound:", eventData);
-							// Воспроизводим звук только если это не от нас
-							if (
-								eventData.telegramId !== myTelegramIdRef.current &&
-								eventData.soundType === "permission-change"
-							) {
-								try {
-									const audioContext = new (window.AudioContext ||
-										(window as any).webkitAudioContext)();
-									const oscillator = audioContext.createOscillator();
-									const gainNode = audioContext.createGain();
-
-									oscillator.connect(gainNode);
-									gainNode.connect(audioContext.destination);
-
-									// Мягкий звук уведомления для других участников
-									oscillator.frequency.setValueAtTime(
-										700,
-										audioContext.currentTime
-									);
-									gainNode.gain.setValueAtTime(0, audioContext.currentTime);
-									gainNode.gain.linearRampToValueAtTime(
-										0.03,
-										audioContext.currentTime + 0.01
-									);
-									gainNode.gain.exponentialRampToValueAtTime(
-										0.001,
-										audioContext.currentTime + 0.15
-									);
-
-									oscillator.type = "sine";
-									oscillator.start(audioContext.currentTime);
-									oscillator.stop(audioContext.currentTime + 0.15);
-								} catch (e) {
-									// Fallback для старых браузеров
-									try {
-										const audio = new Audio();
-										audio.volume = 0.08;
-										audio.src = `data:audio/wav;base64,UklGRlQDAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=`;
-										audio.play();
-									} catch (fallbackError) {
-										// Игнорируем если звук не может быть воспроизведен
-									}
-								}
-							}
-							break;
-
-						case "error":
-							console.error("❌ Server error:", eventData.message);
-							break;
+			if (eventData.currentSelections) {
+				const selectionsMap = new Map();
+				eventData.currentSelections.forEach((selection: any) => {
+					if (selection.telegramId !== myTelegramIdRef.current) {
+						selectionsMap.set(selection.telegramId, {
+							line: selection.line,
+							column: selection.column,
+							selectionStart: selection.selectionStart,
+							selectionEnd: selection.selectionEnd,
+							selectedText: selection.selectedText,
+							userColor: selection.userColor || "#FF6B6B",
+							username: selection.username,
+						});
 					}
-				} catch (error) {
-					console.error("❌ Failed to parse message:", error);
+				});
+				setSelections(selectionsMap);
+				console.log("📍 Loaded initial selections:", selectionsMap);
+			}
+		});
+		socket.on("members-updated", (eventData) => {
+			console.log("👥 Members updated:", eventData);
+			const members = eventData.members || [];
+			setRoomMembers(members);
+		});
+
+		socket.on("member-left", (eventData) => {
+			console.log("👋 Member left:", eventData.telegramId);
+
+			if (!eventData.keepCursor) {
+				setCursors((prev) => {
+					const newCursors = new Map(prev);
+					newCursors.delete(eventData.telegramId);
+					return newCursors;
+				});
+			} else {
+				setCursors((prev) => {
+					const newCursors = new Map(prev);
+					const existingCursor = newCursors.get(eventData.telegramId);
+					if (existingCursor) {
+						newCursors.set(eventData.telegramId, {
+							...existingCursor,
+							isOffline: true,
+						} as any);
+					}
+					return newCursors;
+				});
+			}
+
+			setSelections((prev) => {
+				const newSelections = new Map(prev);
+				newSelections.delete(eventData.telegramId);
+				return newSelections;
+			});
+		});
+
+		socket.on("cursor-action", (eventData) => {
+			if (eventData.telegramId !== myTelegramIdRef.current) {
+				console.log("👆 Cursor update:", {
+					telegramId: eventData.telegramId,
+					username: eventData.username,
+					position: eventData.position,
+					userColor: eventData.userColor,
+				});
+				setCursors((prev) => {
+					const newCursors = new Map(prev);
+					newCursors.set(eventData.telegramId, {
+						telegramId: eventData.telegramId,
+						position: eventData.position,
+						userColor: eventData.userColor,
+						username: eventData.username,
+					});
+					return newCursors;
+				});
+			}
+		});
+
+		socket.on("selection-state", (eventData) => {
+			console.log("📍 Received selection state:", eventData);
+
+			const newSelections = new Map();
+			eventData.selections.forEach((selection: any) => {
+				if (
+					selection.telegramId &&
+					selection.telegramId !== myTelegramIdRef.current
+				) {
+					newSelections.set(selection.telegramId, {
+						line: selection.line,
+						column: selection.column,
+						selectionStart: selection.selectionStart,
+						selectionEnd: selection.selectionEnd,
+						selectedText: selection.selectedText,
+						userColor: selection.userColor || "#FF6B6B",
+						username: selection.username,
+					});
+				}
+			});
+
+			setSelections(newSelections);
+			console.log("📍 Updated selections map:", newSelections);
+		});
+
+		socket.on("complete-session", (eventData) => {
+			console.log("🏁 Session completed:", eventData.message);
+
+			toast(eventData.message);
+
+			setTimeout(() => {
+				const url = new URL(window.location.href);
+				url.search = ""; // Очищаем параметры
+				window.location.href = url.origin + url.pathname;
+			}, 2000);
+		});
+
+		socket.on("code-edit-action", (eventData) => {
+			if (eventData.telegramId !== myTelegramIdRef.current) {
+				console.log("📝 Received code edit from:", eventData.telegramId);
+				markUserAsTyping(eventData.telegramId);
+
+				setCodeEdits((prev) => {
+					const newCodeEdits = new Map(prev);
+					newCodeEdits.set(eventData.telegramId, {
+						telegramId: eventData.telegramId,
+						changes: eventData.changes,
+						newCode: eventData.newCode,
+						userColor: eventData.userColor,
+						username: eventData.username,
+						timestamp: eventData.timestamp,
+					});
+					return newCodeEdits;
+				});
+			}
+		});
+
+		socket.on("code-edit-confirmed", (eventData) => {
+			console.log("✅ Code edit confirmed at:", new Date(eventData.timestamp));
+		});
+
+		socket.on("room-edited", (eventData) => {
+			console.log("🏠 Room settings updated:", eventData);
+
+			if (
+				eventData.studentCursorEnabled !== undefined &&
+				eventData.studentSelectionEnabled !== undefined &&
+				eventData.studentEditCodeEnabled !== undefined
+			) {
+				setRoomPermissions({
+					studentCursorEnabled: eventData.studentCursorEnabled,
+					studentSelectionEnabled: eventData.studentSelectionEnabled,
+					studentEditCodeEnabled: eventData.studentEditCodeEnabled,
+				});
+
+				console.log("🔧 Room permissions updated:", {
+					studentCursorEnabled: eventData.studentCursorEnabled,
+					studentSelectionEnabled: eventData.studentSelectionEnabled,
+					studentEditCodeEnabled: eventData.studentEditCodeEnabled,
+				});
+			}
+		});
+
+		socket.on("room-state-loaded", (eventData) => {
+			console.log("🔄 Room state loaded from DB:", eventData);
+
+			window.dispatchEvent(
+				new CustomEvent("roomStateLoaded", {
+					detail: {
+						lastCode: eventData.lastCode,
+						participantCount: eventData.participantCount,
+					},
+				})
+			);
+		});
+
+		socket.on("clear-user-selections", (eventData) => {
+			console.log("🧹 Clearing selections for user:", eventData.telegramId);
+
+			if (eventData.telegramId !== myTelegramIdRef.current) {
+				setSelections((prev) => {
+					const newSelections = new Map(prev);
+					newSelections.delete(eventData.telegramId);
+					return newSelections;
+				});
+			}
+		});
+
+		socket.on("room-sound", (eventData) => {
+			console.log("🔊 Received room sound:", eventData);
+
+			if (
+				eventData.telegramId !== myTelegramIdRef.current &&
+				eventData.soundType === "permission-change"
+			) {
+				try {
+					const audioContext = new (window.AudioContext ||
+						(window as any).webkitAudioContext)();
+					const oscillator = audioContext.createOscillator();
+					const gainNode = audioContext.createGain();
+
+					oscillator.connect(gainNode);
+					gainNode.connect(audioContext.destination);
+
+					oscillator.frequency.setValueAtTime(700, audioContext.currentTime);
+					gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+					gainNode.gain.linearRampToValueAtTime(
+						0.03,
+						audioContext.currentTime + 0.01
+					);
+					gainNode.gain.exponentialRampToValueAtTime(
+						0.001,
+						audioContext.currentTime + 0.15
+					);
+
+					oscillator.type = "sine";
+					oscillator.start(audioContext.currentTime);
+					oscillator.stop(audioContext.currentTime + 0.15);
+				} catch (e) {
+					// Fallback для старых браузеров
+					try {
+						const audio = new Audio();
+						audio.volume = 0.08;
+						audio.src = `data:audio/wav;base64,UklGRlQDAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=`;
+						audio.play();
+					} catch (fallbackError) {
+						// Игнорируем если звук не может быть воспроизведен
+					}
 				}
 			}
-		};
+		});
+
+		socket.on("error", (eventData) => {
+			console.error("❌ Server error:", eventData.message);
+		});
 	}, [joinRoom, markUserAsTyping]); // Только стабильные зависимости
 
 	// useEffect для принудительного переподключения
@@ -691,7 +631,7 @@ export const useWebSocket = ({
 				if (
 					wasRoomId &&
 					isConnectedRef.current &&
-					socketRef.current?.readyState === WebSocket.OPEN
+					socketRef.current?.connected
 				) {
 					console.log("🏠 Switching to new room via existing connection");
 					// Присоединяемся к новой комнате через существующее соединение
@@ -788,44 +728,40 @@ export const useWebSocket = ({
 	}, []); // Пустой массив зависимостей - выполняется только один раз!
 
 	// Стабильные функции для отправки сообщений
-	const sendCursorPosition = useCallback((position: [number, number]) => {
-		if (socketRef.current?.readyState === WebSocket.OPEN && roomIdRef.current) {
-			const message = `42["cursor",${JSON.stringify({
-				telegramId: myTelegramIdRef.current,
-				roomId: roomIdRef.current,
-				position,
-				logs: [],
-			})}]`;
-			socketRef.current.send(message);
-		}
-	}, []);
+	const sendCursorPosition = useCallback(
+		(position: [number, number]) => {
+			if (socketRef.current?.connected && roomIdRef.current && !completed) {
+				socketRef.current.emit("cursor", {
+					telegramId: myTelegramIdRef.current,
+					roomId: roomIdRef.current,
+					position,
+					logs: [],
+				});
+			}
+		},
+		[completed]
+	);
 
 	const sendSelection = useCallback(
 		(selectionData: {
-			// Для курсора
 			line?: number;
 			column?: number;
-			// Для выделения фрагмента
 			selectionStart?: { line: number; column: number };
 			selectionEnd?: { line: number; column: number };
 			selectedText?: string;
-			// Флаг для явной очистки выделения
 			clearSelection?: boolean;
 		}) => {
-			if (
-				socketRef.current?.readyState === WebSocket.OPEN &&
-				roomIdRef.current
-			) {
-				const message = `42["selection",${JSON.stringify({
+			if (completed) return;
+			if (socketRef.current?.connected && roomIdRef.current) {
+				socketRef.current.emit("selection", {
 					telegramId: myTelegramIdRef.current,
 					roomId: roomIdRef.current,
 					...selectionData,
-				})}]`;
-				console.log("📤 Sending selection message:", message);
-				socketRef.current.send(message);
+				});
+				console.log("📤 Sent selection message");
 			}
 		},
-		[]
+		[completed]
 	);
 
 	const sendCodeEdit = useCallback(
@@ -833,59 +769,61 @@ export const useWebSocket = ({
 			changes: { from: number; to: number; insert: string }[],
 			newCode: string
 		) => {
-			if (
-				socketRef.current?.readyState === WebSocket.OPEN &&
-				roomIdRef.current
-			) {
-				// Отмечаем себя как печатающего
+			if (completed) return;
+			if (socketRef.current?.connected && roomIdRef.current) {
 				markUserAsTyping(myTelegramIdRef.current);
 
-				const message = `42["code-edit",${JSON.stringify({
+				socketRef.current.emit("code-edit", {
 					roomId: roomIdRef.current,
 					telegramId: myTelegramIdRef.current,
 					changes,
 					newCode,
-				})}]`;
-				socketRef.current.send(message);
+				});
 				console.log("📤 Sent code edit:", changes.length, "changes");
 			}
 		},
-		[markUserAsTyping]
+		[markUserAsTyping, completed]
 	);
 
-	const sendEditMember = useCallback((username?: string) => {
-		if (socketRef.current?.readyState === WebSocket.OPEN && roomIdRef.current) {
-			const message = `42["edit-member",${JSON.stringify({
-				telegramId: myTelegramIdRef.current,
-				roomId: roomIdRef.current,
-				username,
-			})}]`;
-			socketRef.current.send(message);
-			console.log("📤 Sent edit member:", username);
-		}
-	}, []);
+	const sendEditMember = useCallback(
+		(username?: string) => {
+			if (completed) return;
+			if (socketRef.current?.connected && roomIdRef.current) {
+				socketRef.current.emit("edit-member", {
+					telegramId: myTelegramIdRef.current,
+					roomId: roomIdRef.current,
+					username,
+				});
+				console.log("📤 Sent edit member:", username);
+			}
+		},
+		[completed]
+	);
 
-	const sendRoomPermissions = useCallback((permissions: RoomPermissions) => {
-		if (socketRef.current?.readyState === WebSocket.OPEN && roomIdRef.current) {
-			const message = `42["edit-room",${JSON.stringify({
-				id: myTelegramIdRef.current,
-				roomId: roomIdRef.current,
-				studentCursorEnabled: permissions.studentCursorEnabled,
-				studentSelectionEnabled: permissions.studentSelectionEnabled,
-				studentEditCodeEnabled: permissions.studentEditCodeEnabled,
-			})}]`;
-			socketRef.current.send(message);
-			console.log("📤 Sent room permissions:", permissions);
+	const sendRoomPermissions = useCallback(
+		(permissions: RoomPermissions) => {
+			if (completed) return;
+			if (socketRef.current?.connected && roomIdRef.current) {
+				socketRef.current.emit("edit-room", {
+					id: myTelegramIdRef.current,
+					roomId: roomIdRef.current,
+					studentCursorEnabled: permissions.studentCursorEnabled,
+					studentSelectionEnabled: permissions.studentSelectionEnabled,
+					studentEditCodeEnabled: permissions.studentEditCodeEnabled,
+				});
+				console.log("📤 Sent room permissions:", permissions);
 
-			// Отправляем звуковой сигнал всем участникам
-			const soundMessage = `42["room-sound",${JSON.stringify({
-				telegramId: myTelegramIdRef.current,
-				roomId: roomIdRef.current,
-				soundType: "permission-change",
-			})}]`;
-			socketRef.current.send(soundMessage);
-		}
-	}, []);
+				socketRef.current.emit("room-sound", {
+					telegramId: myTelegramIdRef.current,
+					roomId: roomIdRef.current,
+					soundType: "permission-change",
+				});
+			}
+		},
+		[completed]
+	);
+
+	console.log(completed);
 
 	return {
 		socket: socketRef.current,
@@ -907,5 +845,6 @@ export const useWebSocket = ({
 		markUserAsTyping,
 		connectionError,
 		completeSession,
+		completed,
 	};
 };
