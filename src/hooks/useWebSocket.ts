@@ -634,14 +634,12 @@ export const useWebSocket = ({
 					socketRef.current?.connected
 				) {
 					console.log("🏠 Switching to new room via existing connection");
-					// Присоединяемся к новой комнате через существующее соединение
 					const savedUsername = localStorage.getItem("innoprog-username");
-					const joinMessage = `42["join-room",${JSON.stringify({
+					socketRef.current.emit("join-room", {
 						telegramId: myTelegramIdRef.current,
 						roomId: roomId,
 						username: savedUsername || undefined,
-					})}]`;
-					socketRef.current.send(joinMessage);
+					});
 					return;
 				}
 
