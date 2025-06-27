@@ -377,6 +377,7 @@ const IDE: React.FC<IDEProps> = React.memo(({ webSocketData }) => {
 								? "Подключение к серверу..."
 								: "Присоединение к комнате..."
 						}
+						isError={Boolean(webSocketData?.connectionError ?? true)}
 					/>
 				)}
 
