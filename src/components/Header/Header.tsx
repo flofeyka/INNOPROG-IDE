@@ -4,42 +4,6 @@ import { isDesktop } from "../..";
 import { RoomMember } from "../IDE/IDE";
 import { EditUsernameModal } from "../StartFormModal/StartFormModal";
 
-// CSS стили для анимаций
-const animationStyles = `
-@keyframes fadeInScale {
-	from {
-		opacity: 0;
-		transform: translateX(-50%) scale(0.95) translateY(-5px);
-	}
-	to {
-		opacity: 1;
-		transform: translateX(-50%) scale(1) translateY(0);
-	}
-}
-
-@keyframes fadeOutScale {
-	from {
-		opacity: 1;
-		transform: translateX(-50%) scale(1) translateY(0);
-	}
-	to {
-		opacity: 0;
-		transform: translateX(-50%) scale(0.95) translateY(-5px);
-	}
-}
-
-@keyframes fadeInScaleMembers {
-	from {
-		opacity: 0;
-		transform: translateX(0) scale(0.95) translateY(-5px);
-	}
-	to {
-		opacity: 1;
-		transform: translateX(0) scale(1) translateY(0);
-	}
-}
-`;
-
 interface RoomPermissions {
 	studentCursorEnabled: boolean;
 	studentSelectionEnabled: boolean;
@@ -76,7 +40,6 @@ const Header: React.FC<IProps> = ({
 	const permissionsCardRef = React.useRef<HTMLDivElement>(null);
 	const membersCardRef = React.useRef<HTMLDivElement>(null);
 
-	// Закрываем карточки при клике вне их
 	React.useEffect(() => {
 		const handleClickOutside = (event: MouseEvent) => {
 			if (
@@ -104,7 +67,6 @@ const Header: React.FC<IProps> = ({
 	}, [showPermissionsCard, showMembersCard]);
 
 	const handleMemberClick = (member: RoomMember) => {
-		// Разрешаем редактировать только свой профиль
 		if (member.telegramId === myTelegramId) {
 			setEditingMember(member);
 			onOpen();
@@ -122,7 +84,6 @@ const Header: React.FC<IProps> = ({
 		permission: keyof RoomPermissions,
 		value: boolean
 	) => {
-		// Мягкий звуковой эффект при переключении
 		try {
 			const audioContext = new (window.AudioContext ||
 				(window as any).webkitAudioContext)();
@@ -132,7 +93,6 @@ const Header: React.FC<IProps> = ({
 			oscillator.connect(gainNode);
 			gainNode.connect(audioContext.destination);
 
-			// Мягкие параметры звука
 			oscillator.frequency.setValueAtTime(
 				value ? 800 : 600,
 				audioContext.currentTime
@@ -155,7 +115,6 @@ const Header: React.FC<IProps> = ({
 			try {
 				const audio = new Audio();
 				audio.volume = 0.05; // Очень тихий звук
-				// Простой тон для fallback
 				audio.src = `data:audio/wav;base64,UklGRlQDAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=`;
 				audio.play();
 			} catch (fallbackError) {
@@ -184,15 +143,12 @@ const Header: React.FC<IProps> = ({
 		studentEditCodeEnabled: "✏️",
 	};
 
-	// Функции для работы с участниками
 	const sortedMembers = React.useMemo(() => {
 		if (!members) return [];
 		return [...members].sort((a, b) => {
-			// Сначала онлайн, потом оффлайн
 			if (a.online !== b.online) {
 				return a.online ? -1 : 1;
 			}
-			// Внутри каждой группы сортируем по имени
 			const nameA = a.username || a.telegramId;
 			const nameB = b.username || b.telegramId;
 			return nameA.localeCompare(nameB);
@@ -207,16 +163,11 @@ const Header: React.FC<IProps> = ({
 
 	return (
 		<>
-			{/* Добавляем CSS стили */}
-			<style>{animationStyles}</style>
-
 			<header className="bg-ide-secondary border-b border-ide-border flex items-center relative px-4 md:px-6">
-				{/* Логотип с отступами */}
 				<div className="flex-shrink-0 py-3 md:py-4">
 					<img src="/logo.svg" alt="INNOPROG" className="h-10" />
 				</div>
 
-				{/* Кнопка "Права" - только для комнат */}
 				{roomId && roomPermissions && (
 					<div className="flex gap-2 justify-center w-full">
 						<div className="flex justify-center relative mx-8">
@@ -236,7 +187,6 @@ const Header: React.FC<IProps> = ({
 								<span className="text-lg">⚙️</span>
 								<span>Настройки</span>
 
-								{/* Индикатор активных разрешений */}
 								<span className="bg-white/20 text-xs px-2 py-1 rounded-full">
 									{Object.values(roomPermissions).filter(Boolean).length}/
 									{Object.keys(roomPermissions).length}
@@ -251,7 +201,6 @@ const Header: React.FC<IProps> = ({
 								</span>
 							</button>
 
-							{/* Выпадающая карточка */}
 							{showPermissionsCard && (
 								<div
 									ref={permissionsCardRef}
@@ -316,10 +265,8 @@ const Header: React.FC<IProps> = ({
 					</div>
 				)}
 
-				{/* Секция участников - только для комнат */}
 				{roomId && members && members.length > 0 && (
 					<div className="flex gap-4 items-center relative">
-						{/* Первые 3 онлайн участника */}
 						{visibleMembers.map((member) => (
 							<div
 								key={member.telegramId}
@@ -350,7 +297,6 @@ const Header: React.FC<IProps> = ({
 							</div>
 						))}
 
-						{/* Кнопка "Ещё" если участников больше 3 */}
 						{hasMoreMembers && (
 							<div className="relative">
 								<button
@@ -363,7 +309,6 @@ const Header: React.FC<IProps> = ({
 									</span>
 								</button>
 
-								{/* Выпадающая карточка со всеми участниками */}
 								{showMembersCard && (
 									<div
 										ref={membersCardRef}
@@ -397,7 +342,6 @@ const Header: React.FC<IProps> = ({
 															setShowMembersCard(false);
 														}}
 													>
-														{/* Аватар участника */}
 														<div
 															className="border-2 p-[2px] rounded-full"
 															style={{
@@ -415,7 +359,6 @@ const Header: React.FC<IProps> = ({
 															</span>
 														</div>
 
-														{/* Информация об участнике */}
 														<div className="flex-1 min-w-0">
 															<div className="flex items-center gap-2">
 																<span
@@ -453,7 +396,6 @@ const Header: React.FC<IProps> = ({
 												))}
 											</div>
 
-											{/* Подвал карточки */}
 											<div className="mt-3 pt-3 border-t border-ide-border flex justify-between items-center">
 												<span className="text-xs text-ide-text-secondary">
 													Нажмите на участника для редактирования

@@ -9,7 +9,6 @@ interface CodeEditorSectionProps {
 	currentAnswer: Answer | null;
 	task: Task | null;
 	activeTab: string;
-	// WebSocket props
 	webSocketData?: {
 		sendSelection: (selectionData: {
 			line?: number;
