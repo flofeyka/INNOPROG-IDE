@@ -51,37 +51,29 @@ type LiveCursorsProps = {
 	webSocketData: WebSocketData;
 };
 
-// Функция для создания более темного оттенка цвета
 const darkenColor = (color: string, amount: number = 0.2): string => {
-	// Убираем # если есть
 	const cleanColor = color.replace("#", "");
 
-	// Конвертируем в RGB
 	const r = parseInt(cleanColor.substring(0, 2), 16);
 	const g = parseInt(cleanColor.substring(2, 4), 16);
 	const b = parseInt(cleanColor.substring(4, 6), 16);
 
-	// Затемняем
 	const newR = Math.round(r * (1 - amount));
 	const newG = Math.round(g * (1 - amount));
 	const newB = Math.round(b * (1 - amount));
 
-	// Конвертируем обратно в hex
 	return `#${newR.toString(16).padStart(2, "0")}${newG
 		.toString(16)
 		.padStart(2, "0")}${newB.toString(16).padStart(2, "0")}`;
 };
 
-// Мемоизируем отдельный курсор
 const SingleCursor = React.memo(
 	({ cursorData }: { cursorData: CursorData }) => {
 		const pixelX = cursorData.position[0] * window.innerWidth;
 		const pixelY = cursorData.position[1] * window.innerHeight;
 
-		// Определяем opacity для офлайн курсоров
 		const opacity = cursorData.isOffline ? 0.4 : 1;
 
-		// Определяем есть ли username
 		const hasUsername = !!cursorData.username;
 		const displayName = cursorData.username || cursorData.telegramId;
 		const truncatedName =
@@ -89,7 +81,6 @@ const SingleCursor = React.memo(
 				? `${displayName.substring(0, 10)}...`
 				: displayName;
 
-		// Создаем CSS переменные для градиента
 		const userColorDark = darkenColor(cursorData.userColor);
 
 		return (
@@ -171,22 +162,18 @@ const Cursor: React.FC<LiveCursorsProps> = ({
 	const { cursors, sendCursorPosition, isConnected, myUserColor } =
 		webSocketData;
 
-	// Ref для throttling отправки позиций
 	const lastSentTime = useRef(0);
 	const lastPosition = useRef<[number, number] | null>(null);
 
-	// Throttled функция отправки курсора (максимум 30 FPS)
 	const throttledSendCursor = useCallback(
 		(position: [number, number]) => {
 			const now = Date.now();
 			const [newX, newY] = position;
 			const [lastX, lastY] = lastPosition.current || [0, 0];
 
-			// Проверяем, прошло ли достаточно времени (33ms = ~30 FPS) и изменилась ли позиция значительно
 			if (now - lastSentTime.current > 33) {
 				const distance = Math.sqrt((newX - lastX) ** 2 + (newY - lastY) ** 2);
 
-				// Отправляем только если курсор сдвинулся более чем на 0.5% экрана
 				if (distance > 0.005) {
 					sendCursorPosition(position);
 					lastSentTime.current = now;
@@ -197,7 +184,6 @@ const Cursor: React.FC<LiveCursorsProps> = ({
 		[sendCursorPosition]
 	);
 
-	// Отправка своего курсора
 	useEffect(() => {
 		if (!roomId || !isConnected) return;
 
@@ -214,11 +200,9 @@ const Cursor: React.FC<LiveCursorsProps> = ({
 		};
 	}, [roomId, isConnected, throttledSendCursor]);
 
-	// Мемоизируем массив курсоров для предотвращения лишних рендеров
 	const cursorElements = useMemo(() => {
 		return Array.from(cursors.entries())
 			.map(([id, cursorData]) => {
-				// Не показываем свой собственный курсор
 				if (id === myTelegramId) return null;
 
 				return <SingleCursor key={id} cursorData={cursorData} />;
@@ -226,32 +210,9 @@ const Cursor: React.FC<LiveCursorsProps> = ({
 			.filter(Boolean);
 	}, [cursors, myTelegramId]);
 
-	// Не показываем курсоры, если нет roomId (работаем в обычном режиме редактора)
 	if (!roomId) return null;
 
-	return (
-		<>
-			{cursorElements}
-			{/* Индикатор моего цвета в углу экрана */}
-			{/* <div
-				style={{
-					position: "fixed",
-					top: "10px",
-					right: "10px",
-					backgroundColor: myUserColor,
-					color: "white",
-					padding: "4px 8px",
-					borderRadius: "4px",
-					fontSize: "12px",
-					fontWeight: "500",
-					zIndex: 9999,
-					boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-				}}
-			>
-				My color: {myUserColor}
-			</div> */}
-		</>
-	);
+	return <>{cursorElements}</>;
 };
 
 export default React.memo(Cursor);

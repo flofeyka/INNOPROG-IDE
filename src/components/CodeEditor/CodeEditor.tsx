@@ -18,16 +18,12 @@ interface CodeEditorProps {
 	codeBefore?: string;
 	codeAfter?: string;
 	readOnly?: boolean;
-	// WebSocket props для выделения
 	sendSelection?: (selectionData: {
-		// Для курсора
 		line?: number;
 		column?: number;
-		// Для выделения фрагмента
 		selectionStart?: { line: number; column: number };
 		selectionEnd?: { line: number; column: number };
 		selectedText?: string;
-		// Флаг для явной очистки выделения
 		clearSelection?: boolean;
 	}) => void;
 	selections?: Map<
@@ -41,7 +37,6 @@ interface CodeEditorProps {
 			userColor: string;
 		}
 	>;
-	// WebSocket props для редактирования
 	sendCodeEdit?: (
 		changes: { from: number; to: number; insert: string }[],
 		newCode: string
@@ -56,49 +51,39 @@ interface CodeEditorProps {
 			timestamp: number;
 		}
 	>;
-	// Информация о том, кто сейчас печатает
 	activeTypers?: Set<string>;
 	myTelegramId?: string;
 	completed: boolean;
 }
 
-// Effect для замены всех выделений
 const replaceSelectionsEffect = StateEffect.define<DecorationSet>();
 
-// Effect для применения изменений кода от других пользователей
 const applyCodeEditEffect = StateEffect.define<{
 	changes: { from: number; to: number; insert: string }[];
 	userColor: string;
 }>();
 
-// State field для хранения выделений других пользователей
 const selectionHighlightField = StateField.define<DecorationSet>({
 	create() {
 		return Decoration.none;
 	},
 	update(decorations, tr) {
-		// Проверяем эффекты замены выделений
 		for (let effect of tr.effects) {
 			if (effect.is(replaceSelectionsEffect)) {
-				// Полностью заменяем декорации новыми
 				return effect.value;
 			}
 		}
 
-		// Если нет эффектов замены, применяем изменения документа к существующим выделениям
 		return decorations.map(tr.changes);
 	},
 	provide: (f) => EditorView.decorations.from(f),
 });
 
-// Extension для обработки изменений кода от других пользователей
 const codeEditExtension = EditorView.updateListener.of((update) => {
-	// Обрабатываем эффекты изменения кода
 	for (let effect of update.transactions.flatMap((tr) => tr.effects)) {
 		if (effect.is(applyCodeEditEffect)) {
 			const { changes } = effect.value;
 			console.log("📝 Applying code changes from other user:", changes);
-			// Изменения уже применены через dispatch, просто логируем
 		}
 	}
 });
@@ -125,35 +110,24 @@ const CodeEditor: React.FC<CodeEditorProps> = React.memo(
 		const prevValue = useRef(value);
 
 		const lastLocalEditTime = useRef<number>(0);
-		const hadTextSelection = useRef<boolean>(false); // Отслеживаем было ли выделение текста
+		const hadTextSelection = useRef<boolean>(false);
 
-		// Используем refs для стабильного доступа к функциям
 		const onChangeRef = useRef(onChange);
 		const sendSelectionRef = useRef(sendSelection);
 		const sendCodeEditRef = useRef(sendCodeEdit);
 
-		// Обновляем refs при изменении функций
 		onChangeRef.current = onChange;
 		sendSelectionRef.current = sendSelection;
 		sendCodeEditRef.current = sendCodeEdit;
 
-		// Обрабатываем загрузку состояния комнаты
 		useEffect(() => {
 			const handleRoomStateLoaded = (event: CustomEvent) => {
 				const { lastCode } = event.detail;
 				if (lastCode && lastCode !== value && editor.current) {
-					console.log("🔄 Loading saved code from DB...");
-
-					// ⚠️ КРИТИЧНО: код из комнаты должен быть ТОЛЬКО редактируемой частью
-					// Не перезаписываем весь редактор, а только редактируемую область
-					// Это предотвращает конфликт с нередактируемыми частями задачи
-
 					isUpdating.current = true;
 					try {
-						// Извлекаем только редактируемую часть из сохраненного кода
 						let editableCode = lastCode;
 
-						// Если код содержит нередактируемые части (старый формат), извлекаем только редактируемую часть
 						if (codeBefore && lastCode.startsWith(codeBefore)) {
 							editableCode = lastCode.slice(codeBefore.length);
 							if (codeAfter && editableCode.endsWith(codeAfter)) {
@@ -162,10 +136,8 @@ const CodeEditor: React.FC<CodeEditorProps> = React.memo(
 							console.log("🔄 Extracted editable part from legacy full code");
 						}
 
-						// Формируем новый полный контент с правильными нередактируемыми частями
 						const fullContent = `${codeBefore}${editableCode}${codeAfter}`;
 
-						// Обновляем код в редакторе
 						const transaction = editor.current.state.update({
 							changes: {
 								from: 0,
@@ -175,15 +147,12 @@ const CodeEditor: React.FC<CodeEditorProps> = React.memo(
 						});
 						editor.current.dispatch(transaction);
 
-						// Обновляем внешнее состояние ТОЛЬКО редактируемой частью
 						if (onChangeRef.current) {
 							onChangeRef.current(editableCode);
 						}
 
 						prevValue.current = editableCode;
-						console.log("✅ Room code loaded preserving task structure");
 					} catch (error) {
-						console.error("Error loading room state:", error);
 					} finally {
 						isUpdating.current = false;
 					}
@@ -200,9 +169,8 @@ const CodeEditor: React.FC<CodeEditorProps> = React.memo(
 					handleRoomStateLoaded as EventListener
 				);
 			};
-		}, [value, codeBefore, codeAfter]); // Добавляем codeBefore и codeAfter как зависимости
+		}, [value, codeBefore, codeAfter]);
 
-		// Проверяем, заблокирован ли редактор
 		const isEditorBlocked = !!(
 			activeTypers &&
 			myTelegramId &&
@@ -210,11 +178,8 @@ const CodeEditor: React.FC<CodeEditorProps> = React.memo(
 			!activeTypers.has(myTelegramId)
 		);
 
-		// Комбинируем блокировку с оригинальным readOnly
-		// const effectiveReadOnly = readOnly || isEditorBlocked;
 		const effectiveReadOnly = readOnly || completed;
 
-		// Обновляем выделения других пользователей
 		useEffect(() => {
 			if (editor.current) {
 				console.log(
@@ -223,7 +188,6 @@ const CodeEditor: React.FC<CodeEditorProps> = React.memo(
 					"selections"
 				);
 
-				// Заменяем все декорации на новые
 				const decorations: any[] = [];
 
 				if (selections && selections.size > 0) {
@@ -231,7 +195,6 @@ const CodeEditor: React.FC<CodeEditorProps> = React.memo(
 						try {
 							const doc = editor.current!.state.doc;
 
-							// Обрабатываем выделение фрагмента
 							if (
 								selectionData.selectionStart &&
 								selectionData.selectionEnd &&
@@ -264,9 +227,7 @@ const CodeEditor: React.FC<CodeEditorProps> = React.memo(
 										`📍 Added text selection for ${telegramId}: "${selectionData.selectedText}"`
 									);
 								}
-							}
-							// Обрабатываем позицию курсора
-							else if (
+							} else if (
 								selectionData.line &&
 								typeof selectionData.column === "number"
 							) {
@@ -298,7 +259,6 @@ const CodeEditor: React.FC<CodeEditorProps> = React.memo(
 					});
 				}
 
-				// Применяем все декорации сразу
 				editor.current.dispatch({
 					effects: replaceSelectionsEffect.of(Decoration.set(decorations)),
 				});
@@ -307,28 +267,23 @@ const CodeEditor: React.FC<CodeEditorProps> = React.memo(
 			}
 		}, [selections]);
 
-		// Обрабатываем изменения кода от других пользователей
 		useEffect(() => {
 			if (editor.current && codeEdits) {
 				const latestEdit = Array.from(codeEdits.values()).sort(
 					(a, b) => b.timestamp - a.timestamp
 				)[0];
 				if (latestEdit) {
-					// Проверяем, не старше ли изменение от других пользователей наших локальных изменений
 					const timeDiff = Date.now() - lastLocalEditTime.current;
 					if (timeDiff < 1000) {
-						// Если мы редактировали менее секунды назад
 						console.log("🚫 Skipping remote edit - local edit too recent");
 						return;
 					}
 
 					console.log("📝 Applying code edit from:", latestEdit.telegramId);
 
-					// Применяем новый код напрямую, сохраняя позицию курсора
 					try {
 						isUpdating.current = true;
 
-						// Сохраняем текущую позицию курсора относительно редактируемой области
 						const selection = editor.current.state.selection;
 						const cursorPos = selection.main.head;
 						const relativeCursorPos = Math.max(
@@ -341,7 +296,6 @@ const CodeEditor: React.FC<CodeEditorProps> = React.memo(
 
 						const fullContent = `${codeBefore}${latestEdit.newCode}${codeAfter}`;
 
-						// Вычисляем новую позицию курсора
 						const newCursorPos = Math.min(
 							relativeCursorPos,
 							fullContent.length - codeAfter.length
@@ -353,14 +307,13 @@ const CodeEditor: React.FC<CodeEditorProps> = React.memo(
 								to: editor.current.state.doc.length,
 								insert: fullContent,
 							},
-							selection: { anchor: newCursorPos, head: newCursorPos }, // Устанавливаем корректную позицию курсора
+							selection: { anchor: newCursorPos, head: newCursorPos },
 							effects: applyCodeEditEffect.of({
 								changes: latestEdit.changes,
 								userColor: latestEdit.userColor,
 							}),
 						});
 
-						// Обновляем состояние родительского компонента
 						if (latestEdit.newCode !== prevValue.current) {
 							prevValue.current = latestEdit.newCode;
 							onChangeRef.current(latestEdit.newCode);
@@ -386,8 +339,8 @@ const CodeEditor: React.FC<CodeEditorProps> = React.memo(
 					languageSupport,
 					oneDark,
 					keymap.of(defaultKeymap),
-					selectionHighlightField, // Добавляем поле для выделений
-					codeEditExtension, // Добавляем обработку изменений кода
+					selectionHighlightField,
+					codeEditExtension,
 					EditorView.updateListener.of((update) => {
 						if (update.docChanged && !isUpdating.current) {
 							try {
@@ -396,7 +349,6 @@ const CodeEditor: React.FC<CodeEditorProps> = React.memo(
 									!newValue.startsWith(codeBefore) ||
 									!newValue.endsWith(codeAfter)
 								) {
-									// Восстанавливаем состояние если пользователь изменил защищенные части
 									isUpdating.current = true;
 									editor.current?.dispatch({
 										changes: {
@@ -416,10 +368,9 @@ const CodeEditor: React.FC<CodeEditorProps> = React.memo(
 
 								if (userCode !== prevValue.current) {
 									prevValue.current = userCode;
-									lastLocalEditTime.current = Date.now(); // Отмечаем время локального изменения
+									lastLocalEditTime.current = Date.now();
 									onChangeRef.current(userCode);
 
-									// Отправляем изменения кода через WebSocket (каждый символ)
 									if (sendCodeEditRef.current) {
 										const changes: {
 											from: number;
@@ -443,25 +394,21 @@ const CodeEditor: React.FC<CodeEditorProps> = React.memo(
 							}
 						}
 
-						// Обработка выделения текста - НО ТОЛЬКО если НЕ изменялся документ
 						if (
 							update.selectionSet &&
 							!update.docChanged &&
 							sendSelectionRef.current
 						) {
 							const selection = update.state.selection.main;
-							// Отправляем информацию о выделении даже если оно пустое (курсор)
 							try {
 								const doc = update.state.doc;
 
 								if (!selection.empty) {
-									// Есть выделение текста
 									const selectedText = doc.sliceString(
 										selection.from,
 										selection.to
 									);
 
-									// Находим строки начала и конца выделения
 									const startLine = doc.lineAt(selection.from);
 									const endLine = doc.lineAt(selection.to);
 
@@ -477,31 +424,27 @@ const CodeEditor: React.FC<CodeEditorProps> = React.memo(
 										selectedText: selectedText,
 									};
 
-									// Отправляем информацию о выделении
 									sendSelectionRef.current(selectionData);
-									hadTextSelection.current = true; // Отмечаем что есть выделение
+									hadTextSelection.current = true;
 									console.log(
 										"📤 Sending text selection:",
 										`${selectionData.selectionStart.line}:${selectionData.selectionStart.column} - ${selectionData.selectionEnd.line}:${selectionData.selectionEnd.column}`,
 										`"${selectedText}"`
 									);
 								} else {
-									// Просто курсор - проверяем было ли раньше выделение
 									const line = doc.lineAt(selection.head);
 									const lineNumber = line.number;
 									const columnNumber = selection.head - line.from;
 
 									if (hadTextSelection.current) {
-										// Было выделение, теперь его нет - явно очищаем
 										console.log("📤 Clearing text selection - user deselected");
 										sendSelectionRef.current({
 											line: lineNumber,
 											column: columnNumber,
-											clearSelection: true, // Специальный флаг для очистки
+											clearSelection: true,
 										});
 										hadTextSelection.current = false;
 									} else {
-										// Просто движение курсора
 										sendSelectionRef.current({
 											line: lineNumber,
 											column: columnNumber,
@@ -534,7 +477,6 @@ const CodeEditor: React.FC<CodeEditorProps> = React.memo(
 						"&.cm-focused": {
 							outline: "none",
 						},
-						// Стили для выделений пользователей
 						".cm-user-text-selection": {
 							borderRadius: "2px",
 							position: "relative",
@@ -565,15 +507,13 @@ const CodeEditor: React.FC<CodeEditorProps> = React.memo(
 			return () => {
 				view.destroy();
 			};
-		}, [language, effectiveReadOnly, codeBefore, codeAfter]); // Убираем value, onChange, sendSelection, sendCodeEdit из зависимостей
+		}, [language, effectiveReadOnly, codeBefore, codeAfter]);
 
-		// Обновляем содержимое при изменении value извне
 		useEffect(() => {
 			if (editor.current && value !== prevValue.current) {
 				try {
 					isUpdating.current = true;
 
-					// Сохраняем текущую позицию курсора относительно редактируемой области
 					const selection = editor.current.state.selection;
 					const cursorPos = selection.main.head;
 					const relativeCursorPos = Math.max(
@@ -586,7 +526,6 @@ const CodeEditor: React.FC<CodeEditorProps> = React.memo(
 
 					const fullContent = `${codeBefore}${value}${codeAfter}`;
 
-					// Вычисляем новую позицию курсора
 					const newCursorPos = Math.min(
 						relativeCursorPos,
 						fullContent.length - codeAfter.length
@@ -598,7 +537,7 @@ const CodeEditor: React.FC<CodeEditorProps> = React.memo(
 							to: editor.current.state.doc.length,
 							insert: fullContent,
 						},
-						selection: { anchor: newCursorPos, head: newCursorPos }, // Устанавливаем корректную позицию курсора
+						selection: { anchor: newCursorPos, head: newCursorPos },
 					});
 					prevValue.current = value;
 					isUpdating.current = false;

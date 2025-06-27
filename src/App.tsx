@@ -7,24 +7,21 @@ import { useWebSocket } from "./hooks/useWebSocket";
 
 const App = React.memo(() => {
 	const [searchParams] = useSearchParams();
-	// const socketRef = useRef<WebSocket | null>(null);
 	const roomId = searchParams.get("roomId");
 	const telegramId =
 		searchParams.get("telegramId") ||
 		window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString() ||
 		"1234567890";
 
-	// Мемоизируем параметры WebSocket
 	const webSocketParams = useMemo(
 		() => ({
-			socketUrl: process.env.REACT_PUBLIC_WS_URL || "http://localhost:3000",
+			socketUrl: process.env.REACT_PUBLIC_WS_URL || "https://ide.innoprog.ru",
 			myTelegramId: telegramId,
 			roomId,
 		}),
 		[telegramId, roomId]
 	);
 
-	// Инициализация WebSocket
 	const webSocketData = useWebSocket(webSocketParams);
 
 	return (
