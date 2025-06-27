@@ -15,7 +15,7 @@ const App = React.memo(() => {
 
 	const webSocketParams = useMemo(
 		() => ({
-			socketUrl: process.env.REACT_PUBLIC_WS_URL || "https://ide.innoprog.ru",
+			socketUrl: process.env.REACT_APP_WS_URL || "https://ide.innoprog.ru",
 			myTelegramId: telegramId,
 			roomId,
 		}),

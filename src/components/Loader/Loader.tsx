@@ -1,5 +1,5 @@
-import React from "react";
 import { Spinner } from "@heroui/react";
+import React from "react";
 import "./Loader.css";
 
 interface LoaderProps {
@@ -51,11 +51,11 @@ const Loader: React.FC<LoaderProps> = ({
 								<div className="animate-bounce h-2 w-2 bg-primary rounded-full"></div>
 							</div>
 						)}
-						{isErrorState && (
+						{/* {isErrorState && (
 							<div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
 								Попытка переподключения...
 							</div>
-						)}
+						)} */}
 					</div>
 				</div>
 			</div>

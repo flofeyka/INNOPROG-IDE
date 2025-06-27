@@ -460,8 +460,8 @@ export const useWebSocket = ({
 			}
 		});
 
-		socket.on("error", (eventData) => {
-			console.error("❌ Server error:", eventData.message);
+		socket.on("join-room:error", (eventData) => {
+			setConnectionError(eventData.message);
 		});
 	}, [joinRoom, markUserAsTyping]);
 	useEffect(() => {
