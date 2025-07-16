@@ -1,6 +1,6 @@
 import React, { useRef, useState } from "react";
-import { isDesktop } from "../..";
-import { Task } from "../../types/task";
+import { isDesktop } from "../../../../index";
+import { Task } from "../../../../types/task";
 
 interface TaskDescriptionProps {
 	task: Task | null;

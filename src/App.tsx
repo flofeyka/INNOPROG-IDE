@@ -1,8 +1,8 @@
 import React, { useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import "./App.css";
-import Cursor from "./components/Cursor/Cursor";
-import IDE from "./components/IDE/IDE";
+import Cursor from "./components/shared/Room/Cursor/Cursor";
+import IDE from "./components/shared/Code/IDE/IDE";
 import { useWebSocket } from "./hooks/useWebSocket";
 
 const App = React.memo(() => {
@@ -10,8 +10,7 @@ const App = React.memo(() => {
 	const roomId = searchParams.get("roomId");
 	const telegramId =
 		searchParams.get("telegramId") ||
-		window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString() ||
-		"1234567890";
+		window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString() || localStorage.getItem('telegramId');
 
 	const webSocketParams = useMemo(
 		() => ({
@@ -31,16 +30,9 @@ const App = React.memo(() => {
 				roomId={roomId}
 				webSocketData={webSocketData}
 			/>
-			{/* <WebSocketDebug
-				webSocketData={webSocketData}
-				roomId={roomId}
-				telegramId={telegramId}
-			/> */}
-			<IDE webSocketData={webSocketData} />
+			<IDE webSocketData={webSocketData} telegramId={telegramId}/>
 		</>
 	);
 });
-
-App.displayName = "App";
 
 export default App;

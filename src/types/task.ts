@@ -64,4 +64,6 @@ export interface Answer {
   output: string;
   hint: string;
   timeout: number;
-} 
+}
+
+export type Language = 'js' | 'cpp' | 'py';
