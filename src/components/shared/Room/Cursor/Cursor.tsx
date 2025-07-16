@@ -52,7 +52,7 @@ type LiveCursorsProps = {
 };
 
 const darkenColor = (color: string, amount: number = 0.2): string => {
-	const cleanColor = color.replace("#", "");
+	const cleanColor = color && color.startsWith('#') ? color.replace("#", "") : 'ff0000';
 
 	const r = parseInt(cleanColor.substring(0, 2), 16);
 	const g = parseInt(cleanColor.substring(2, 4), 16);
@@ -76,6 +76,7 @@ const SingleCursor = React.memo(
 
 		const hasUsername = !!cursorData.username;
 		const displayName = cursorData.username || cursorData.telegramId;
+		console.log(displayName);
 		const truncatedName =
 			displayName.length > 10
 				? `${displayName.substring(0, 10)}...`
