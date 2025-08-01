@@ -10,15 +10,17 @@ interface UseWebSocketProps {
     roomId: string | null;
 }
 
-interface RoomMember {
+export interface RoomMember {
     telegramId: string;
     online: boolean;
+    isYourself: boolean;
     userColor?: string;
     username?: string;
 }
 
-interface CursorData {
+export interface CursorData {
     telegramId: string;
+    isYourself: boolean;
     position: [number, number];
     userColor: string;
     username?: string;
@@ -74,6 +76,7 @@ export const useWebSocket = ({
     const connectionAttempts = useRef<number>(0);
     const lastConnectionTime = useRef<number>(0);
     const maxRetriesBeforeError = useRef<number>(3);
+    const isRemoteUpdate = useRef<boolean>(false);
 
     const [forceReconnectTrigger, setForceReconnectTrigger] = useState(0);
 
@@ -240,6 +243,7 @@ export const useWebSocket = ({
             setLanguage(eventData.language);
             setJoinedCode(eventData.lastCode);
             localStorage.setItem('telegramId', eventData.telegramId);
+            myTelegramIdRef.current = eventData.telegramId.startsWith('i') ? eventData.telegramId : myTelegramIdRef.current;
 
             if (eventData.roomPermissions) {
                 setRoomPermissions(eventData.roomPermissions);
@@ -276,6 +280,10 @@ export const useWebSocket = ({
         });
         socket.on("members-updated", (eventData) => {
             const members = eventData.members || [];
+            const me = members.find((member: RoomMember) => member.isYourself);
+            if (me) {
+                localStorage.setItem('innoprog-username', me.username);
+            }
             setRoomMembers(members);
         });
 
@@ -315,6 +323,7 @@ export const useWebSocket = ({
                         telegramId: eventData.telegramId,
                         position: eventData.position,
                         userColor: eventData.userColor,
+                        isYourself: eventData.isYourself,
                         username: eventData.username,
                     });
                     return newCursors;
@@ -355,11 +364,9 @@ export const useWebSocket = ({
         });
 
         socket.on("code-edit-action", (eventData) => {
-            if (eventData.telegramId !== myTelegramIdRef.current) {
-                markUserAsTyping(eventData.telegramId);
+            markUserAsTyping(eventData.telegramId);
 
-                setCodeEdits(eventData.update);
-            }
+            setCodeEdits(eventData.update);
         });
 
         socket.on("room-edited", (eventData) => {
@@ -625,11 +632,11 @@ export const useWebSocket = ({
 
 
     const sendEditMember = useCallback(
-        (username?: string) => {
+        (username?: string, telegramId?: string) => {
             if (completed) return;
             if (socketRef.current?.connected && roomIdRef.current) {
                 socketRef.current.emit("edit-member", {
-                    telegramId: myTelegramIdRef.current,
+                    telegramId: telegramId || myTelegramIdRef.current,
                     roomId: roomIdRef.current,
                     username,
                 });
@@ -641,7 +648,7 @@ export const useWebSocket = ({
     const sendChangeLanguage = useCallback((language: Language) => {
         if (socketRef.current?.connected && roomIdRef.current && !completed) {
             socketRef.current.emit('edit-room', {
-                id: myTelegramIdRef.current,
+                telegramId: myTelegramIdRef.current,
                 roomId: roomIdRef.current,
                 language
             })
@@ -652,7 +659,7 @@ export const useWebSocket = ({
         (permissions: RoomPermissions) => {
             if (socketRef.current?.connected && roomIdRef.current && !completed) {
                 socketRef.current.emit("edit-room", {
-                    id: myTelegramIdRef.current,
+                    telegramId: myTelegramIdRef.current,
                     roomId: roomIdRef.current,
                     ...permissions
                 });
@@ -684,6 +691,7 @@ export const useWebSocket = ({
         completed,
         sendChangeLanguage,
         language,
-        joinedCode
+        joinedCode,
+        isRemoteUpdate
     };
 };

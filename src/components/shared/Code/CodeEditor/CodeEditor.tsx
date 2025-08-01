@@ -120,16 +120,19 @@ const CodeEditor: React.FC<IProps> = React.memo(
 
     const onChangeRef = useRef(onChange);
     const sendSelectionRef = useRef(sendSelection);
-
-    const [isInitializing, setIsInitializing] = useState<boolean>(true);
+    const isRemoteUpdate = useRef<boolean>(false);
+    const isInitializing = useRef<boolean>(true);
 
     onChangeRef.current = onChange;
     sendSelectionRef.current = sendSelection;
 
-    const ydoc = useYDocFromUpdates(updatesFromProps);
+    const ydoc = useYDocFromUpdates({
+      updates: updatesFromProps,
+      isRemoteUpdate,
+    });
 
     useEffect(() => {
-      setIsInitializing(true);
+      isInitializing.current = true;
       if (joinedCode) {
         const yText = ydoc.getText("codemirror");
 
@@ -137,7 +140,7 @@ const CodeEditor: React.FC<IProps> = React.memo(
         yText.delete(0, yText.length);
         yText.insert(0, joinedCode);
       }
-      setIsInitializing(false);
+      isInitializing.current = false;
     }, [joinedCode, ydoc]);
 
     useEffect(() => {
@@ -330,7 +333,11 @@ const CodeEditor: React.FC<IProps> = React.memo(
           codeEditExtension,
           lineNumbers(),
           EditorView.updateListener.of((update) => {
-            if (update.docChanged && !isUpdating.current && !isInitializing) {
+            if (
+              update.docChanged &&
+              !isUpdating.current &&
+              !isInitializing.current
+            ) {
               try {
                 const newValue = update.state.doc.toString();
 
@@ -338,6 +345,7 @@ const CodeEditor: React.FC<IProps> = React.memo(
                   !newValue.startsWith(codeBefore) ||
                   !newValue.endsWith(codeAfter)
                 ) {
+                  // Локальные изменения: обновление редактора, чтобы избежать их в цикле
                   isUpdating.current = true;
                   editor.current?.dispatch({
                     changes: {
@@ -358,16 +366,17 @@ const CodeEditor: React.FC<IProps> = React.memo(
                 if (userCode !== prevValue.current) {
                   prevValue.current = userCode;
                   lastLocalEditTime.current = Date.now();
-                  onChangeRef.current(userCode);
 
-                  if (ydoc && onSendUpdate) {
+                  if (!isRemoteUpdate.current) {
+                    onChangeRef.current(userCode); // Отправляем локальные изменения
+                  }
+
+                  // Отправляем обновление на сервер, если данные поменялись
+                  if (ydoc && onSendUpdate && !isRemoteUpdate.current) {
+                    isRemoteUpdate.current = true;
                     const updateBinary = Y.encodeStateAsUpdate(ydoc);
-                    onSendUpdate(updateBinary);
-                  } else {
-                    console.log(ydoc, onSendUpdate);
-                    console.warn(
-                      "Y.Doc is not initialized yet, skipping sending update"
-                    );
+                    onSendUpdate(updateBinary); // Отправка данных на сервер
+                    isRemoteUpdate.current = false;
                   }
                 }
               } catch (error) {
@@ -375,6 +384,7 @@ const CodeEditor: React.FC<IProps> = React.memo(
               }
             }
 
+            // Обработка выделения текста
             if (
               update.selectionSet &&
               !update.docChanged &&
@@ -428,6 +438,7 @@ const CodeEditor: React.FC<IProps> = React.memo(
               }
             }
           }),
+
           EditorView.editable.of(!effectiveReadOnly),
           EditorState.readOnly.of(effectiveReadOnly),
           EditorView.theme({

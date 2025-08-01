@@ -6,33 +6,33 @@ import IDE from "./components/shared/Code/IDE/IDE";
 import { useWebSocket } from "./hooks/useWebSocket";
 
 const App = React.memo(() => {
-	const [searchParams] = useSearchParams();
-	const roomId = searchParams.get("roomId");
-	const telegramId =
-		searchParams.get("telegramId") ||
-		window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString() || localStorage.getItem('telegramId');
+  const [searchParams] = useSearchParams();
+  const roomId = searchParams.get("roomId");
+  const telegramId =
+    searchParams.get("telegramId") ||
+    window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
 
-	const webSocketParams = useMemo(
-		() => ({
-			socketUrl: process.env.REACT_APP_WS_URL || "https://ide.innoprog.ru",
-			myTelegramId: telegramId,
-			roomId,
-		}),
-		[telegramId, roomId]
-	);
+  const webSocketParams = useMemo(
+    () => ({
+      socketUrl: process.env.REACT_APP_WS_URL || "https://ide.innoprog.ru",
+      myTelegramId: telegramId,
+      roomId,
+    }),
+    [telegramId, roomId]
+  );
 
-	const webSocketData = useWebSocket(webSocketParams);
+  const webSocketData = useWebSocket(webSocketParams);
 
-	return (
-		<>
-			<Cursor
-				myTelegramId={telegramId}
-				roomId={roomId}
-				webSocketData={webSocketData}
-			/>
-			<IDE webSocketData={webSocketData} telegramId={telegramId}/>
-		</>
-	);
+  return (
+    <>
+      <Cursor
+        myTelegramId={telegramId}
+        roomId={roomId}
+        webSocketData={webSocketData}
+      />
+      <IDE webSocketData={webSocketData} telegramId={telegramId} />
+    </>
+  );
 });
 
 export default App;

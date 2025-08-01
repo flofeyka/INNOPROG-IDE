@@ -14,20 +14,7 @@ import SubmitModal from "../SubmitModal/SubmitModal";
 import TaskDescription from "../TaskDescription/TaskDescription";
 import Header from "../../Header/Header";
 import Footer from "../../Footer/Footer";
-
-export interface RoomMember {
-  telegramId: string;
-  online: boolean;
-  userColor?: string;
-  username?: string;
-}
-
-interface CursorData {
-  telegramId: string;
-  position: [number, number];
-  userColor: string;
-  isOffline?: boolean;
-}
+import { CursorData, RoomMember } from "../../../../hooks/useWebSocket";
 
 interface RoomPermissions {
   studentCursorEnabled: boolean;
@@ -173,7 +160,7 @@ const IDE: React.FC<IDEProps> = React.memo(({ webSocketData, telegramId }) => {
 
     // Проверяем, есть ли у текущего пользователя имя в roomMembers
     const currentMember = webSocketData.roomMembers?.find(
-      (member) => member.telegramId === telegramId
+      (member) => member.isYourself
     );
 
     // Показываем модалку только если нет сохраненного имени И у пользователя нет имени в комнате
