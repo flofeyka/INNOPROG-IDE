@@ -604,7 +604,7 @@ export const useWebSocket = ({
             selectedText?: string;
             clearSelection?: boolean;
         }) => {
-            if (socketRef.current?.connected && roomIdRef.current && !completed && roomPermissions.studentSelectionEnabled) {
+            if (socketRef.current?.connected && roomIdRef.current && (!completed && roomPermissions.studentSelectionEnabled || isTeacher)) {
                 socketRef.current.emit("selection", {
                     telegramId: myTelegramIdRef.current,
                     roomId: roomIdRef.current,
@@ -612,12 +612,12 @@ export const useWebSocket = ({
                 });
             }
         },
-        [completed, roomPermissions.studentSelectionEnabled]
+        [completed, roomPermissions.studentSelectionEnabled, isTeacher]
     );
 
     const sendCodeEdit = useCallback(
         (update: Uint8Array) => {
-            if (socketRef.current?.connected && roomIdRef.current && !completed && roomPermissions.studentEditCodeEnabled) {
+            if (socketRef.current?.connected && roomIdRef.current && !completed && !isTeacher && roomPermissions.studentEditCodeEnabled) {
                 markUserAsTyping(myTelegramIdRef.current);
 
                 socketRef.current.emit("code-edit", {

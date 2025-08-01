@@ -66,4 +66,11 @@ export interface Answer {
   timeout: number;
 }
 
-export type Language = 'js' | 'cpp' | 'py';
+export enum Language {
+  JAVA = 'java',
+  JS = 'js',
+  CPP = 'cpp',
+  SQL = 'SQL',
+  PY = 'py',
+  DART = 'dart'
+}
