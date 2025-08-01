@@ -17,6 +17,12 @@ import { yCollab } from "y-codemirror.next";
 import { Awareness } from "y-protocols/awareness";
 import { Select, SelectItem } from "@heroui/react";
 import { cpp } from "@codemirror/lang-cpp";
+import {java} from "@codemirror/lang-java";
+import {sql} from "@codemirror/lang-sql";
+import {Language} from "../../../../types/task";
+import { dart } from "@codemirror/legacy-modes/mode/clike";
+import {StreamLanguage} from "@codemirror/language";
+
 
 interface IProps {
   value: string;
@@ -48,9 +54,8 @@ interface IProps {
   updatesFromProps?: Uint8Array[];
   activeTypers?: Set<string>;
   myTelegramId?: string;
-  completed: boolean;
   disabled: boolean;
-  handleLanguageChange: (language: "js" | "py" | "cpp") => void;
+  handleLanguageChange: (language: Language) => void;
   isTeacher?: boolean;
   joinedCode?: string;
 }
@@ -104,7 +109,6 @@ const CodeEditor: React.FC<IProps> = React.memo(
     selections,
     onSendUpdate,
     updatesFromProps,
-    completed,
     disabled,
     handleLanguageChange,
     joinedCode,
@@ -202,8 +206,8 @@ const CodeEditor: React.FC<IProps> = React.memo(
     // );
 
     const effectiveReadOnly = useMemo(
-      () => disabled || (!completed && readOnly),
-      [readOnly, completed, disabled]
+      () => disabled || readOnly,
+      [readOnly, disabled]
     );
 
     useEffect(() => {
@@ -308,12 +312,18 @@ const CodeEditor: React.FC<IProps> = React.memo(
 
       const languageSupport = (() => {
         switch (language) {
-          case "py":
+          case Language.PY:
             return python();
-          case "js":
+          case Language.JS:
             return javascript();
-          case "cpp":
+          case Language.CPP:
             return cpp();
+          case Language.JAVA:
+            return java()
+          case Language.SQL:
+            return sql()
+          case Language.DART:
+            return StreamLanguage.define(dart);
           default:
             return python();
         }
@@ -543,7 +553,7 @@ const CodeEditor: React.FC<IProps> = React.memo(
             selectedKeys={[language]}
             isDisabled={isTeacher === false}
             onChange={(e) =>
-              handleLanguageChange(e.target.value as "js" | "cpp" | "py")
+              handleLanguageChange(e.target.value as Language)
             }
             size={"sm"}
             className={"min-w-[100px] w-auto bg-[#333] rounded-xl"}
@@ -553,6 +563,9 @@ const CodeEditor: React.FC<IProps> = React.memo(
             <SelectItem key={"js"}>JS</SelectItem>
             <SelectItem key={"cpp"}>C++</SelectItem>
             <SelectItem key={"py"}>Python</SelectItem>
+            <SelectItem key={"java"}>Java</SelectItem>
+            <SelectItem key={"sql"}>SQL</SelectItem>
+            <SelectItem key={"dart"}>Dart</SelectItem>
           </Select>
           {/* {isEditorBlocked && (
 						<span className="ml-2 text-yellow-500 text-xs">

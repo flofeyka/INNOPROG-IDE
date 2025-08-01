@@ -326,7 +326,6 @@ const IDE: React.FC<IDEProps> = React.memo(({ webSocketData, telegramId }) => {
     [setSearchParams, webSocketData]
   );
 
-  // Мемоизируем webSocketData для предотвращения пересоздания объекта
   const memoizedWebSocketData = useMemo(() => {
     if (!webSocketData) return undefined;
 

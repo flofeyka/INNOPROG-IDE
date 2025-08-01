@@ -1,5 +1,5 @@
 import React from "react";
-import type { Answer, Task } from "../../../../types/task";
+import {Answer, Language, Task} from "../../../../types/task";
 import CodeEditor from "../CodeEditor/CodeEditor";
 
 interface CodeEditorSectionProps {
@@ -39,7 +39,7 @@ interface CodeEditorSectionProps {
     completed: boolean;
     joinedCode?: string;
   };
-  handleLanguageChange: (language: "js" | "py" | "cpp") => void;
+  handleLanguageChange: (language: Language) => void;
 }
 
 const CodeEditorSection: React.FC<CodeEditorSectionProps> = React.memo(
@@ -68,7 +68,7 @@ const CodeEditorSection: React.FC<CodeEditorSectionProps> = React.memo(
           handleLanguageChange={handleLanguageChange}
           disabled={
             !(
-              Boolean(webSocketData?.roomPermissions.studentEditCodeEnabled) ||
+              Boolean(webSocketData?.roomPermissions.studentEditCodeEnabled || webSocketData?.completed) ||
               Boolean(webSocketData?.isTeacher)
             )
           }
@@ -83,7 +83,6 @@ const CodeEditorSection: React.FC<CodeEditorSectionProps> = React.memo(
           updatesFromProps={webSocketData?.updatesFromProps}
           activeTypers={webSocketData?.activeTypers}
           myTelegramId={webSocketData?.myTelegramId}
-          completed={webSocketData?.completed ?? false}
           isTeacher={webSocketData?.isTeacher}
           joinedCode={webSocketData?.joinedCode}
         />
