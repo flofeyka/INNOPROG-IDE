@@ -1,24 +1,37 @@
 import * as Y from 'yjs';
 import React from 'react';
 
-const useYDocFromUpdates = (updates?: Uint8Array[]) => {
+interface UseYDocOptions {
+    updates?: Uint8Array[];
+    isRemoteUpdate?: React.MutableRefObject<boolean>;
+};
+
+const useYDocFromUpdates = ({ updates, isRemoteUpdate }: UseYDocOptions) => {
     const [ydoc] = React.useState(() => new Y.Doc());
 
+    console.log(updates);
+
     React.useEffect(() => {
-        if (!updates) return;
+        if (!updates || updates.length === 0) return;
 
-        const updatesArray = Array.isArray(updates) ? updates : [updates];
-
-        if (updatesArray.length === 0) return;
 
         try {
-            updatesArray.forEach((update, i) => {
+            if (isRemoteUpdate) {
+                isRemoteUpdate.current = true;
+            }
+            const updatesArray = Array.isArray(updates) ? updates : [updates];
+
+            for (const update of updatesArray) {
                 Y.applyUpdate(ydoc, new Uint8Array(update));
-            });
+            }
         } catch (e) {
             console.error('Failed to apply updates:', e);
+        } finally {
+            if (isRemoteUpdate) {
+                isRemoteUpdate.current = false;
+            }
         }
-    }, [updates, ydoc]);
+    }, [updates, ydoc, isRemoteUpdate]);
 
     React.useEffect(() => {
         return () => {
@@ -28,6 +41,5 @@ const useYDocFromUpdates = (updates?: Uint8Array[]) => {
 
     return ydoc;
 };
-
 
 export default useYDocFromUpdates;
