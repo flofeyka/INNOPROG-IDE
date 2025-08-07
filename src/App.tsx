@@ -30,7 +30,10 @@ const App = React.memo(() => {
         roomId={roomId}
         webSocketData={webSocketData}
       />
-      <IDE webSocketData={webSocketData} telegramId={telegramId} />
+      <IDE
+        webSocketData={webSocketData}
+        telegramId={webSocketData.telegramId}
+      />
     </>
   );
 });

@@ -242,6 +242,8 @@ export const useWebSocket = ({
             setIsTeacher(eventData.isTeacher);
             setLanguage(eventData.language);
             setJoinedCode(eventData.lastCode);
+            myTelegramIdRef.current = eventData.telegramId;
+            console.log(myTelegramIdRef.current);
             localStorage.setItem('telegramId', eventData.telegramId);
             myTelegramIdRef.current = eventData.telegramId.startsWith('i') ? eventData.telegramId : myTelegramIdRef.current;
 
@@ -585,7 +587,7 @@ export const useWebSocket = ({
         (position: [number, number]) => {
             if (socketRef.current?.connected && roomIdRef.current && !completed && roomPermissions.studentCursorEnabled) {
                 socketRef.current.emit("cursor", {
-                    telegramId: myTelegramIdRef.current,
+                    telegramId: myTelegramId,
                     roomId: roomIdRef.current,
                     position,
                     logs: [],
@@ -606,7 +608,7 @@ export const useWebSocket = ({
         }) => {
             if (socketRef.current?.connected && roomIdRef.current && (!completed && roomPermissions.studentSelectionEnabled || isTeacher)) {
                 socketRef.current.emit("selection", {
-                    telegramId: myTelegramIdRef.current,
+                    telegramId: myTelegramId,
                     roomId: roomIdRef.current,
                     ...selectionData,
                 });
@@ -636,7 +638,8 @@ export const useWebSocket = ({
             if (completed) return;
             if (socketRef.current?.connected && roomIdRef.current) {
                 socketRef.current.emit("edit-member", {
-                    telegramId: telegramId || myTelegramIdRef.current,
+                    changeTelegramId: telegramId,
+                    telegramId: myTelegramId,
                     roomId: roomIdRef.current,
                     username,
                 });
@@ -648,7 +651,7 @@ export const useWebSocket = ({
     const sendChangeLanguage = useCallback((language: Language) => {
         if (socketRef.current?.connected && roomIdRef.current && !completed) {
             socketRef.current.emit('edit-room', {
-                telegramId: myTelegramIdRef.current,
+                telegramId: myTelegramId,
                 roomId: roomIdRef.current,
                 language
             })
@@ -659,7 +662,7 @@ export const useWebSocket = ({
         (permissions: RoomPermissions) => {
             if (socketRef.current?.connected && roomIdRef.current && !completed) {
                 socketRef.current.emit("edit-room", {
-                    telegramId: myTelegramIdRef.current,
+                    telegramId: myTelegramId,
                     roomId: roomIdRef.current,
                     ...permissions
                 });
@@ -681,6 +684,7 @@ export const useWebSocket = ({
         sendCursorPosition,
         sendSelection,
         updatesFromProps: codeEdits,
+        telegramId: myTelegramIdRef.current,
         onSendUpdate: sendCodeEdit,
         sendEditMember,
         sendRoomPermissions,
