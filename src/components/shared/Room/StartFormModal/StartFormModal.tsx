@@ -23,10 +23,8 @@ const StartFormModal: React.FC<IProps> = ({ onSendForm }) => {
     // Проверяем localStorage на наличие сохраненного имени
     const savedUsername = localStorage.getItem("innoprog-username");
     if (savedUsername) {
-      // Если имя сохранено, сразу отправляем его и не открываем модалку
       onSendForm(savedUsername);
     } else {
-      // Если имени нет, открываем модалку
       onOpen();
     }
   }, [onSendForm, onOpen]);
@@ -46,7 +44,6 @@ const StartFormModal: React.FC<IProps> = ({ onSendForm }) => {
           <Button
             color="secondary"
             onPress={() => {
-              // Сохраняем имя в localStorage
               if (username.trim()) {
                 localStorage.setItem("innoprog-username", username.trim());
               }
