@@ -78,7 +78,6 @@ const SingleCursor = React.memo(
 
     const hasUsername = !!cursorData.username;
     const displayName = cursorData.username || cursorData.telegramId;
-    console.log(displayName);
     const truncatedName =
       displayName.length > 10
         ? `${displayName.substring(0, 10)}...`

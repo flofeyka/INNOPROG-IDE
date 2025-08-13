@@ -9,7 +9,6 @@ interface UseYDocOptions {
 const useYDocFromUpdates = ({ updates, isRemoteUpdate }: UseYDocOptions) => {
     const [ydoc] = React.useState(() => new Y.Doc());
 
-    console.log(updates);
 
     React.useEffect(() => {
         if (!updates || updates.length === 0) return;

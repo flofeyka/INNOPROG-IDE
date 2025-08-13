@@ -203,7 +203,6 @@ const IDE: React.FC<IDEProps> = React.memo(({ webSocketData, telegramId }) => {
             ...taskData.answers[0],
           });
         }
-        console.log("📋 Task loaded:", taskData);
       } catch (error) {
         console.error("Failed to load task:", error);
       }
@@ -217,19 +216,16 @@ const IDE: React.FC<IDEProps> = React.memo(({ webSocketData, telegramId }) => {
     const loadCode = async () => {
       // Если есть roomId, ждем сначала загрузки из комнаты
       if (roomId && !roomCodeLoaded) {
-        console.log("⏳ Waiting for room code to load...");
         return;
       }
 
       // Если код уже загружен из комнаты, не перезаписываем его
       if (codeSource === "room") {
-        console.log("📝 Code already loaded from room, skipping API load");
         return;
       }
 
       // Загружаем код из API
       if (taskId && answer_id) {
-        console.log("📥 Loading code from API (answer)...");
         try {
           const data = await api.getSubmitCode(
             answer_id,
@@ -241,14 +237,11 @@ const IDE: React.FC<IDEProps> = React.memo(({ webSocketData, telegramId }) => {
           if (data.code) {
             setCode(data.code);
             setCodeSource("api");
-            console.log("✅ Code loaded from API answer");
           }
         } catch (error) {
           console.error("Failed to load answer code:", error);
         }
       } else if (taskId && !answer_id && codeSource === "none") {
-        // Если нет answer_id, устанавливаем пустой код
-        console.log("📝 No answer_id, setting empty code");
         setCode("");
         setCodeSource("api");
       }
@@ -261,10 +254,6 @@ const IDE: React.FC<IDEProps> = React.memo(({ webSocketData, telegramId }) => {
   useEffect(() => {
     const handleRoomStateLoaded = (event: CustomEvent) => {
       const { lastCode, participantCount } = event.detail;
-      console.log("🏠 Room state loaded:", {
-        codeLength: lastCode?.length || 0,
-        participantCount,
-      });
 
       if (lastCode && lastCode.trim()) {
         let editableCode = lastCode;
@@ -279,18 +268,12 @@ const IDE: React.FC<IDEProps> = React.memo(({ webSocketData, telegramId }) => {
             if (codeAfter && editableCode.endsWith(codeAfter)) {
               editableCode = editableCode.slice(0, -codeAfter.length);
             }
-            console.log("🔄 Extracted editable code from full saved code");
           }
         }
 
-        // Устанавливаем только редактируемую часть
         setCode(editableCode);
         setCodeSource("room");
-        console.log(
-          "✅ Code loaded from room (editable part only, preserves task structure)"
-        );
       } else {
-        console.log("📭 No code in room, will load from API");
       }
       setRoomCodeLoaded(true);
     };

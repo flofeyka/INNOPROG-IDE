@@ -242,8 +242,6 @@ export const useWebSocket = ({
             setIsTeacher(eventData.isTeacher);
             setLanguage(eventData.language);
             setJoinedCode(eventData.lastCode);
-            myTelegramIdRef.current = eventData.telegramId;
-            console.log(myTelegramIdRef.current);
             localStorage.setItem('telegramId', eventData.telegramId);
             myTelegramIdRef.current = eventData.telegramId.startsWith('i') ? eventData.telegramId : myTelegramIdRef.current;
 
@@ -282,7 +280,7 @@ export const useWebSocket = ({
         });
         socket.on("members-updated", (eventData) => {
             const members = eventData.members || [];
-            const me = members.find((member: RoomMember) => member.isYourself);
+            const me = members.find((member: RoomMember) => member.telegramId === myTelegramIdRef.current);
             if (me) {
                 localStorage.setItem('innoprog-username', me.username);
             }
@@ -587,7 +585,7 @@ export const useWebSocket = ({
         (position: [number, number]) => {
             if (socketRef.current?.connected && roomIdRef.current && !completed && roomPermissions.studentCursorEnabled) {
                 socketRef.current.emit("cursor", {
-                    telegramId: myTelegramId,
+                    telegramId: myTelegramIdRef.current,
                     roomId: roomIdRef.current,
                     position,
                     logs: [],

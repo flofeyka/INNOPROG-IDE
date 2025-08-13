@@ -17,12 +17,11 @@ import { yCollab } from "y-codemirror.next";
 import { Awareness } from "y-protocols/awareness";
 import { Select, SelectItem } from "@heroui/react";
 import { cpp } from "@codemirror/lang-cpp";
-import {java} from "@codemirror/lang-java";
-import {sql} from "@codemirror/lang-sql";
-import {Language} from "../../../../types/task";
+import { java } from "@codemirror/lang-java";
+import { sql } from "@codemirror/lang-sql";
+import { Language } from "../../../../types/task";
 import { dart } from "@codemirror/legacy-modes/mode/clike";
-import {StreamLanguage} from "@codemirror/language";
-
+import { StreamLanguage } from "@codemirror/language";
 
 interface IProps {
   value: string;
@@ -92,7 +91,6 @@ const codeEditExtension = EditorView.updateListener.of((update) => {
   for (let effect of update.transactions.flatMap((tr) => tr.effects)) {
     if (effect.is(applyCodeEditEffect)) {
       const { changes } = effect.value;
-      console.log("📝 Applying code changes from other user:", changes);
     }
   }
 });
@@ -160,7 +158,6 @@ const CodeEditor: React.FC<IProps> = React.memo(
               if (codeAfter && editableCode.endsWith(codeAfter)) {
                 editableCode = editableCode.slice(0, -codeAfter.length);
               }
-              console.log("🔄 Extracted editable part from legacy full code");
             }
 
             const fullContent = `${codeBefore}${editableCode}${codeAfter}`;
@@ -215,7 +212,6 @@ const CodeEditor: React.FC<IProps> = React.memo(
         const decorations: any[] = [];
 
         if (selections && selections.size > 0) {
-          console.log(selections);
           selections.forEach((selectionData, telegramId) => {
             try {
               const doc = editor.current!.state.doc;
@@ -248,9 +244,6 @@ const CodeEditor: React.FC<IProps> = React.memo(
                   });
 
                   decorations.push(selectionDecoration.range(from, to));
-                  console.log(
-                    `📍 Added text selection for ${telegramId}: "${selectionData.selectedText}"`
-                  );
                 }
               } else if (
                 selectionData.line &&
@@ -269,9 +262,6 @@ const CodeEditor: React.FC<IProps> = React.memo(
                   });
 
                   decorations.push(cursorDecoration.range(position, position));
-                  console.log(
-                    `📍 Added cursor position for ${telegramId}: ${selectionData.line}:${selectionData.column}`
-                  );
                 }
               }
             } catch (error) {
@@ -287,8 +277,6 @@ const CodeEditor: React.FC<IProps> = React.memo(
         editor.current.dispatch({
           effects: replaceSelectionsEffect.of(Decoration.set(decorations)),
         });
-
-        console.log("📍 Applied", decorations.length, "selection decorations");
       }
     }, [selections]);
 
@@ -302,8 +290,6 @@ const CodeEditor: React.FC<IProps> = React.memo(
           color: "#ff0000", // временно сделай цвет видимым
         });
         awarenessRef.current = awareness;
-
-        console.log("✅ Awareness initialized:", awareness.getLocalState());
       }
     }, [ydoc]);
 
@@ -319,9 +305,9 @@ const CodeEditor: React.FC<IProps> = React.memo(
           case Language.CPP:
             return cpp();
           case Language.JAVA:
-            return java()
+            return java();
           case Language.SQL:
-            return sql()
+            return sql();
           case Language.DART:
             return StreamLanguage.define(dart);
           default:
@@ -552,9 +538,7 @@ const CodeEditor: React.FC<IProps> = React.memo(
           <Select
             selectedKeys={[language]}
             isDisabled={isTeacher === false}
-            onChange={(e) =>
-              handleLanguageChange(e.target.value as Language)
-            }
+            onChange={(e) => handleLanguageChange(e.target.value as Language)}
             size={"sm"}
             className={"min-w-[100px] w-auto bg-[#333] rounded-xl"}
             variant={"bordered"}
