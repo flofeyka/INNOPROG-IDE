@@ -9,7 +9,6 @@ interface CodeEditorSectionProps {
   currentAnswer: Answer | null;
   task: Task | null;
   activeTab: string;
-  currentCode: string;
   setCurrentCode: Dispatch<SetStateAction<string>>;
   webSocketData?: {
     isTeacher?: boolean;
@@ -39,7 +38,6 @@ interface CodeEditorSectionProps {
     activeTypers: Set<string>;
     myTelegramId: string;
     completed: boolean;
-    joinedCode?: string;
   };
   handleLanguageChange: (language: Language) => void;
 }
@@ -54,7 +52,6 @@ const CodeEditorSection: React.FC<CodeEditorSectionProps> = React.memo(
     activeTab,
     webSocketData,
     handleLanguageChange,
-    currentCode,
     setCurrentCode,
   }) => {
     return (
@@ -69,7 +66,6 @@ const CodeEditorSection: React.FC<CodeEditorSectionProps> = React.memo(
           language={language}
           codeBefore={currentAnswer?.code_before || ""}
           codeAfter={currentAnswer?.code_after || ""}
-          currentCode={currentCode}
           setCurrentCode={setCurrentCode}
           handleLanguageChange={handleLanguageChange}
           disabled={
@@ -92,7 +88,6 @@ const CodeEditorSection: React.FC<CodeEditorSectionProps> = React.memo(
           activeTypers={webSocketData?.activeTypers}
           myTelegramId={webSocketData?.myTelegramId}
           isTeacher={webSocketData?.isTeacher}
-          joinedCode={webSocketData?.joinedCode}
         />
       </div>
     );

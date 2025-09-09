@@ -1,6 +1,11 @@
 import { defaultKeymap, indentWithTab } from "@codemirror/commands";
+import { cpp } from "@codemirror/lang-cpp";
+import { java } from "@codemirror/lang-java";
 import { javascript } from "@codemirror/lang-javascript";
 import { python } from "@codemirror/lang-python";
+import { sql } from "@codemirror/lang-sql";
+import { StreamLanguage } from "@codemirror/language";
+import { dart } from "@codemirror/legacy-modes/mode/clike";
 import { EditorState, StateEffect, StateField } from "@codemirror/state";
 import { oneDark } from "@codemirror/theme-one-dark";
 import {
@@ -9,19 +14,15 @@ import {
   EditorView,
   keymap,
   lineNumbers,
+  WidgetType,
 } from "@codemirror/view";
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import * as Y from "yjs";
-import useYDocFromUpdates from "../../../../hooks/useYDocFromUpdates";
+import { Select, SelectItem } from "@heroui/react";
+import React, { useEffect, useMemo, useRef } from "react";
 import { yCollab } from "y-codemirror.next";
 import { Awareness } from "y-protocols/awareness";
-import { Select, SelectItem } from "@heroui/react";
-import { cpp } from "@codemirror/lang-cpp";
-import { java } from "@codemirror/lang-java";
-import { sql } from "@codemirror/lang-sql";
+import * as Y from "yjs";
+import useYDocFromUpdates from "../../../../hooks/useYDocFromUpdates";
 import { Language } from "../../../../types/task";
-import { dart } from "@codemirror/legacy-modes/mode/clike";
-import { StreamLanguage } from "@codemirror/language";
 
 interface IProps {
   value: string;
@@ -30,7 +31,6 @@ interface IProps {
   codeBefore?: string;
   codeAfter?: string;
   readOnly?: boolean;
-  currentCode: string;
   setCurrentCode: (val: string) => void;
   sendSelection?: (selectionData: {
     line?: number;
@@ -45,6 +45,7 @@ interface IProps {
     {
       line?: number;
       column?: number;
+      username?: string;
       selectionStart?: { line: number; column: number };
       selectionEnd?: { line: number; column: number };
       selectedText?: string;
@@ -63,39 +64,26 @@ interface IProps {
 
 const replaceSelectionsEffect = StateEffect.define<DecorationSet>();
 
-const applyCodeEditEffect = StateEffect.define<{
-  changes: { from: number; to: number; insert: string }[];
-  userColor: string;
-}>();
-
 const selectionHighlightField = StateField.define<DecorationSet>({
   create() {
     return Decoration.none;
   },
   update(decorations, tr) {
     try {
-      for (let effect of tr.effects) {
-        if (effect.is(replaceSelectionsEffect)) {
-          return effect.value;
+      for (let e of tr.effects) {
+        if (e.is(replaceSelectionsEffect)) {
+          return e.value;
         }
       }
-
       return decorations.map(tr.changes);
     } catch (e) {
       console.error(e);
+
       return decorations;
     }
   },
   provide: (f) => EditorView.decorations.from(f),
 });
-
-// const codeEditExtension = EditorView.updateListener.of((update) => {
-//   for (let effect of update.transactions.flatMap((tr) => tr.effects)) {
-//     if (effect.is(applyCodeEditEffect)) {
-//       const { changes } = effect.value;
-//     }
-//   }
-// });
 
 const CodeEditor: React.FC<IProps> = React.memo(
   ({
@@ -111,14 +99,11 @@ const CodeEditor: React.FC<IProps> = React.memo(
     updatesFromProps,
     disabled,
     handleLanguageChange,
-    joinedCode,
     isTeacher,
-    currentCode,
     setCurrentCode,
   }) => {
     const editor = useRef<EditorView>();
     const editorContainer = useRef<HTMLDivElement>(null);
-    const isUpdating = useRef(false);
     const prevValue = useRef(value);
 
     const lastLocalEditTime = useRef<number>(0);
@@ -140,7 +125,6 @@ const CodeEditor: React.FC<IProps> = React.memo(
       const handleRoomStateLoaded = (event: CustomEvent) => {
         const { lastCode } = event.detail;
         if (lastCode && lastCode !== value && editor.current) {
-          isUpdating.current = true;
           try {
             let editableCode = lastCode;
 
@@ -168,8 +152,7 @@ const CodeEditor: React.FC<IProps> = React.memo(
 
             prevValue.current = editableCode;
           } catch (error) {
-          } finally {
-            isUpdating.current = false;
+            console.error(error);
           }
         }
       };
@@ -186,90 +169,113 @@ const CodeEditor: React.FC<IProps> = React.memo(
       };
     }, [value, codeBefore, codeAfter]);
 
-    // const isEditorBlocked = !!(
-    // 	activeTypers &&
-    // 	myTelegramId &&
-    // 	activeTypers.size > 0 &&
-    // 	!activeTypers.has(myTelegramId)
-    // );
-
     const effectiveReadOnly = useMemo(
       () => disabled || readOnly,
       [readOnly, disabled]
     );
 
     useEffect(() => {
-      if (editor.current) {
-        const decorations: any[] = [];
+      if (!editor.current) return;
 
-        if (selections && selections.size > 0) {
-          selections.forEach((selectionData, telegramId) => {
-            try {
-              const doc = editor.current!.state.doc;
+      const decorations: any[] = [];
+      const doc = editor.current.state.doc;
 
+      if (selections && selections.size > 0) {
+        selections.forEach((selectionData, telegramId) => {
+          try {
+            if (
+              selectionData.selectionStart &&
+              selectionData.selectionEnd &&
+              selectionData.selectedText
+            ) {
               if (
-                selectionData.selectionStart &&
-                selectionData.selectionEnd &&
-                selectionData.selectedText
+                selectionData.selectionStart.line <= doc.lines &&
+                selectionData.selectionEnd.line <= doc.lines
               ) {
-                if (
-                  selectionData.selectionStart.line <= doc.lines &&
-                  selectionData.selectionEnd.line <= doc.lines
-                ) {
-                  const startLineInfo = doc.line(
-                    selectionData.selectionStart.line
-                  );
-                  const endLineInfo = doc.line(selectionData.selectionEnd.line);
+                const startLineInfo = doc.line(
+                  selectionData.selectionStart.line
+                );
+                const endLineInfo = doc.line(selectionData.selectionEnd.line);
 
-                  const from =
-                    startLineInfo.from + selectionData.selectionStart.column;
-                  const to =
-                    endLineInfo.from + selectionData.selectionEnd.column;
+                const from =
+                  startLineInfo.from + selectionData.selectionStart.column;
+                const to = endLineInfo.from + selectionData.selectionEnd.column;
 
-                  const selectionDecoration = Decoration.mark({
-                    class: "cm-user-text-selection",
-                    attributes: {
-                      style: `background-color: ${selectionData.userColor}40 !important; border-bottom: 2px solid ${selectionData.userColor} !important;`,
-                      title: `Selected by ${telegramId}: "${selectionData.selectedText}"`,
-                    },
-                  });
+                const selectionDecoration = Decoration.mark({
+                  class: "cm-user-text-selection",
+                  attributes: {
+                    style: `
+                    background-color: ${selectionData.userColor}40 !important;
+                    border-bottom: 2px solid ${selectionData.userColor} !important;
+                  `,
+                    title: `Selected by ${
+                      selectionData.userColor || telegramId
+                    }: "${selectionData.selectedText}"`,
+                  },
+                });
 
-                  decorations.push(selectionDecoration.range(from, to));
-                }
-              } else if (
-                selectionData.line &&
-                typeof selectionData.column === "number"
-              ) {
-                if (selectionData.line <= doc.lines) {
-                  const lineInfo = doc.line(selectionData.line);
-                  const position = lineInfo.from + selectionData.column;
+                decorations.push(selectionDecoration.range(from, to));
+              }
+            } else if (
+              selectionData.line &&
+              typeof selectionData.column === "number"
+            ) {
+              if (selectionData.line <= doc.lines) {
+                const lineInfo = doc.line(selectionData.line);
+                const position = lineInfo.from + selectionData.column;
 
-                  const cursorDecoration = Decoration.mark({
-                    class: "cm-user-cursor-position",
-                    attributes: {
-                      style: `border-left: 3px solid ${selectionData.userColor} !important; margin-left: -1px;`,
-                      title: `${telegramId} cursor at ${selectionData.line}:${selectionData.column}`,
-                    },
-                  });
+                const cursorDecoration = Decoration.widget({
+                  widget: new (class extends WidgetType {
+                    toDOM() {
+                      const wrapper = document.createElement("span");
+                      wrapper.style.position = "relative";
 
-                  decorations.push(cursorDecoration.range(position, position));
+                      const cursor = document.createElement("span");
+                      cursor.style.borderLeft = `2px solid ${selectionData.userColor}`;
+                      cursor.style.marginLeft = "-1px";
+                      cursor.style.marginBottom = "-5px";
+                      cursor.style.height = "1.2em";
+                      cursor.style.display = "inline-block";
+                      cursor.style.animation = "blink 1s step-end infinite";
+
+                      const label = document.createElement("span");
+                      label.textContent = selectionData.username || telegramId;
+                      label.style.position = "absolute";
+                      label.style.top = "2em";
+                      label.style.left = "2px";
+                      label.style.background = selectionData.userColor;
+                      label.style.color = "white";
+                      label.style.fontSize = "0.7em";
+                      label.style.padding = "0 2px";
+                      label.style.borderRadius = "3px";
+                      label.style.whiteSpace = "nowrap";
+
+                      wrapper.appendChild(cursor);
+                      wrapper.appendChild(label);
+
+                      return wrapper;
+                    }
+                  })(),
+                  side: -1,
+                }).range(position);
+
+                if (position >= 0 && position <= doc.length) {
+                  decorations.push(cursorDecoration);
                 }
               }
-            } catch (error) {
-              console.error(
-                "Error processing selection for",
-                telegramId,
-                error
-              );
             }
-          });
-        }
-
-        editor.current.dispatch({
-          effects: replaceSelectionsEffect.of(Decoration.set(decorations)),
+          } catch (error) {
+            console.error("Error processing selection for", telegramId, error);
+          }
         });
       }
-    }, [selections]);
+
+      // обновляем редактор
+      const decoSet = Decoration.set(decorations, true);
+      editor.current.dispatch({
+        effects: replaceSelectionsEffect.of(decoSet),
+      });
+    }, [editor, selections]);
 
     const awarenessRef = React.useRef<Awareness | null>(null);
 
@@ -318,7 +324,7 @@ const CodeEditor: React.FC<IProps> = React.memo(
           selectionHighlightField,
           lineNumbers(),
           EditorView.updateListener.of((update) => {
-            if (update.docChanged && !isUpdating.current) {
+            if (update.docChanged) {
               try {
                 const newValue = update.state.doc.toString();
 
@@ -328,7 +334,6 @@ const CodeEditor: React.FC<IProps> = React.memo(
                   !newValue.startsWith(codeBefore) ||
                   !newValue.endsWith(codeAfter)
                 ) {
-                  isUpdating.current = true;
                   editor.current?.dispatch({
                     changes: {
                       from: 0,
@@ -338,7 +343,6 @@ const CodeEditor: React.FC<IProps> = React.memo(
                   });
 
                   console.log(`${codeBefore}${prevValue.current}${codeAfter}`);
-                  isUpdating.current = false;
                   return;
                 }
 
@@ -480,8 +484,6 @@ const CodeEditor: React.FC<IProps> = React.memo(
     useEffect(() => {
       if (editor.current && value !== prevValue.current) {
         try {
-          isUpdating.current = true;
-
           const selection = editor.current.state.selection;
           const cursorPos = selection.main.head;
           const relativeCursorPos = Math.max(
@@ -508,7 +510,6 @@ const CodeEditor: React.FC<IProps> = React.memo(
             selection: { anchor: newCursorPos, head: newCursorPos },
           });
           prevValue.current = value;
-          isUpdating.current = false;
         } catch (error) {
           console.error("Error updating editor content:", error);
         }
