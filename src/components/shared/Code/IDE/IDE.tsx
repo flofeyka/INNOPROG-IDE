@@ -394,7 +394,6 @@ const IDE: React.FC<IDEProps> = React.memo(({ webSocketData, telegramId }) => {
             language={language}
             currentAnswer={currentAnswer}
             task={task}
-            currentCode={currentCode}
             setCurrentCode={setCurrentCode}
             activeTab={activeTab}
             webSocketData={memoizedWebSocketData}
