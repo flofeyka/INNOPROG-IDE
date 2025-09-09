@@ -35,7 +35,8 @@ export const useCodeExecution = ({
 	onOpen,
 	status,
 }: UseCodeExecutionProps) => {
-	const [isRunning, setIsRunning] = useState(false);
+	const [isRunning, setIsRunning] = useState<boolean>(false);
+	const [currentCode, setCurrentCode] = useState<string>('');
 
 	const handleRunCode = async () => {
 		if (status === "success" && taskId) {
@@ -47,19 +48,13 @@ export const useCodeExecution = ({
 		setOutput("");
 
 		try {
-			// ✅ ПРАВИЛЬНО: формируем полный код из частей
-			// code - это ТОЛЬКО редактируемая часть из состояния компонента
-			// codeBefore и codeAfter всегда берутся из задачи
-			// Это гарантирует, что нередактируемые части всегда корректны
-			const fullCode = `${
-				currentAnswer?.code_before || task?.answers![0].code_before
-					? task?.answers![0].code_before
-					: ""
-			}\n${code}\n${
-				currentAnswer?.code_after || task?.answers![0].code_after
+			const fullCode = `${currentAnswer?.code_before || task?.answers![0].code_before
+				? task?.answers![0].code_before
+				: ""
+				}\n${currentCode || code}\n${currentAnswer?.code_after || task?.answers![0].code_after
 					? task?.answers![0].code_after
 					: ""
-			}`;
+				}`;
 
 			const checkData = {
 				input_data: currentAnswer?.input || inputData || "-",
@@ -78,21 +73,18 @@ export const useCodeExecution = ({
 					return;
 				}
 				setOutput(
-					`Тест пройден успешно!\n${
-						task?.answers?.length! > 1
-							? `Результат программы: ${result.output}`
-							: ""
+					`Тест пройден успешно!\n${task?.answers?.length! > 1
+						? `Результат программы: ${result.output}`
+						: ""
 					}`
 				);
 				setStatus("success");
 			} else {
 				setOutput(
-					`Ошибка: ${result.comment || "Неверный результат"}${
-						result.output !== "error"
-							? `\nПолучено: ${result.output}\nОжидалось: ${
-									task?.answers![0]?.output || outputData.trim()
-							  }`
-							: ""
+					`Ошибка: ${result.comment || "Неверный результат"}${result.output !== "error"
+						? `\nПолучено: ${result.output}\nОжидалось: ${task?.answers![0]?.output || outputData.trim()
+						}`
+						: ""
 					}`
 				);
 				setStatus("error");
@@ -110,13 +102,11 @@ export const useCodeExecution = ({
 
 	const onSendCheck = async () => {
 		setIsRunning(true);
-		// ✅ ПРАВИЛЬНО: также формируем код из частей для отправки
 		const submittedCode =
 			task?.answers && task.answers.length > 1
 				? code
-				: `${
-						currentAnswer?.code_before ? currentAnswer.code_before : ""
-				  }${code}${currentAnswer?.code_after ? currentAnswer.code_after : ""}`;
+				: `${currentAnswer?.code_before ? currentAnswer.code_before : ""
+				}${code}${currentAnswer?.code_after ? currentAnswer.code_after : ""}`;
 		try {
 			await api.submitCode({
 				program: submittedCode,
@@ -139,5 +129,7 @@ export const useCodeExecution = ({
 		isRunning,
 		handleRunCode,
 		onSendCheck,
+		currentCode,
+		setCurrentCode
 	};
 };

@@ -13,7 +13,6 @@ const useYDocFromUpdates = ({ updates, isRemoteUpdate }: UseYDocOptions) => {
     React.useEffect(() => {
         if (!updates || updates.length === 0) return;
 
-
         try {
             if (isRemoteUpdate) {
                 isRemoteUpdate.current = true;

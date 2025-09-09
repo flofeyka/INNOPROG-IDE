@@ -10,7 +10,8 @@ const App = React.memo(() => {
   const roomId = searchParams.get("roomId");
   const telegramId =
     searchParams.get("telegramId") ||
-    window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
+    window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString() ||
+    localStorage.getItem("telegramId");
 
   const webSocketParams = useMemo(
     () => ({
