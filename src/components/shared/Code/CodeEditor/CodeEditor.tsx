@@ -1,4 +1,4 @@
-import { defaultKeymap } from "@codemirror/commands";
+import { defaultKeymap, indentWithTab } from "@codemirror/commands";
 import { javascript } from "@codemirror/lang-javascript";
 import { python } from "@codemirror/lang-python";
 import { EditorState, StateEffect, StateField } from "@codemirror/state";
@@ -30,6 +30,8 @@ interface IProps {
   codeBefore?: string;
   codeAfter?: string;
   readOnly?: boolean;
+  currentCode: string;
+  setCurrentCode: (val: string) => void;
   sendSelection?: (selectionData: {
     line?: number;
     column?: number;
@@ -87,13 +89,13 @@ const selectionHighlightField = StateField.define<DecorationSet>({
   provide: (f) => EditorView.decorations.from(f),
 });
 
-const codeEditExtension = EditorView.updateListener.of((update) => {
-  for (let effect of update.transactions.flatMap((tr) => tr.effects)) {
-    if (effect.is(applyCodeEditEffect)) {
-      const { changes } = effect.value;
-    }
-  }
-});
+// const codeEditExtension = EditorView.updateListener.of((update) => {
+//   for (let effect of update.transactions.flatMap((tr) => tr.effects)) {
+//     if (effect.is(applyCodeEditEffect)) {
+//       const { changes } = effect.value;
+//     }
+//   }
+// });
 
 const CodeEditor: React.FC<IProps> = React.memo(
   ({
@@ -111,6 +113,8 @@ const CodeEditor: React.FC<IProps> = React.memo(
     handleLanguageChange,
     joinedCode,
     isTeacher,
+    currentCode,
+    setCurrentCode,
   }) => {
     const editor = useRef<EditorView>();
     const editorContainer = useRef<HTMLDivElement>(null);
@@ -123,7 +127,6 @@ const CodeEditor: React.FC<IProps> = React.memo(
     const onChangeRef = useRef(onChange);
     const sendSelectionRef = useRef(sendSelection);
     const isRemoteUpdate = useRef<boolean>(false);
-    const isInitializing = useRef<boolean>(true);
 
     onChangeRef.current = onChange;
     sendSelectionRef.current = sendSelection;
@@ -132,18 +135,6 @@ const CodeEditor: React.FC<IProps> = React.memo(
       updates: updatesFromProps,
       isRemoteUpdate,
     });
-
-    useEffect(() => {
-      isInitializing.current = true;
-      if (joinedCode) {
-        const yText = ydoc.getText("codemirror");
-
-        // Очистим перед вставкой, чтобы избежать дублирования
-        yText.delete(0, yText.length);
-        yText.insert(0, joinedCode);
-      }
-      isInitializing.current = false;
-    }, [joinedCode, ydoc]);
 
     useEffect(() => {
       const handleRoomStateLoaded = (event: CustomEvent) => {
@@ -314,7 +305,6 @@ const CodeEditor: React.FC<IProps> = React.memo(
             return python();
         }
       })();
-      // const languageSupport = language === "py" ? python() : javascript();
 
       const state = EditorState.create({
         doc: `${codeBefore}${value}${codeAfter}`,
@@ -324,24 +314,20 @@ const CodeEditor: React.FC<IProps> = React.memo(
             : []),
           languageSupport,
           oneDark,
-          keymap.of(defaultKeymap),
+          keymap.of([...defaultKeymap, indentWithTab]),
           selectionHighlightField,
-          codeEditExtension,
           lineNumbers(),
           EditorView.updateListener.of((update) => {
-            if (
-              update.docChanged &&
-              !isUpdating.current &&
-              !isInitializing.current
-            ) {
+            if (update.docChanged && !isUpdating.current) {
               try {
                 const newValue = update.state.doc.toString();
+
+                setCurrentCode(newValue);
 
                 if (
                   !newValue.startsWith(codeBefore) ||
                   !newValue.endsWith(codeAfter)
                 ) {
-                  // Локальные изменения: обновление редактора, чтобы избежать их в цикле
                   isUpdating.current = true;
                   editor.current?.dispatch({
                     changes: {
@@ -350,6 +336,8 @@ const CodeEditor: React.FC<IProps> = React.memo(
                       insert: `${codeBefore}${prevValue.current}${codeAfter}`,
                     },
                   });
+
+                  console.log(`${codeBefore}${prevValue.current}${codeAfter}`);
                   isUpdating.current = false;
                   return;
                 }
@@ -364,14 +352,13 @@ const CodeEditor: React.FC<IProps> = React.memo(
                   lastLocalEditTime.current = Date.now();
 
                   if (!isRemoteUpdate.current) {
-                    onChangeRef.current(userCode); // Отправляем локальные изменения
+                    onChangeRef.current(userCode);
                   }
 
-                  // Отправляем обновление на сервер, если данные поменялись
                   if (ydoc && onSendUpdate && !isRemoteUpdate.current) {
                     isRemoteUpdate.current = true;
                     const updateBinary = Y.encodeStateAsUpdate(ydoc);
-                    onSendUpdate(updateBinary); // Отправка данных на сервер
+                    onSendUpdate(updateBinary);
                     isRemoteUpdate.current = false;
                   }
                 }
@@ -380,7 +367,6 @@ const CodeEditor: React.FC<IProps> = React.memo(
               }
             }
 
-            // Обработка выделения текста
             if (
               update.selectionSet &&
               !update.docChanged &&
@@ -551,11 +537,6 @@ const CodeEditor: React.FC<IProps> = React.memo(
             <SelectItem key={"sql"}>SQL</SelectItem>
             <SelectItem key={"dart"}>Dart</SelectItem>
           </Select>
-          {/* {isEditorBlocked && (
-						<span className="ml-2 text-yellow-500 text-xs">
-							🔒 Кто-то печатает...
-						</span>
-					)} */}
         </div>
         <div
           ref={editorContainer}

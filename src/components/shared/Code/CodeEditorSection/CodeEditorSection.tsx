@@ -1,5 +1,5 @@
-import React from "react";
-import {Answer, Language, Task} from "../../../../types/task";
+import React, { Dispatch, SetStateAction } from "react";
+import { Answer, Language, Task } from "../../../../types/task";
 import CodeEditor from "../CodeEditor/CodeEditor";
 
 interface CodeEditorSectionProps {
@@ -9,6 +9,8 @@ interface CodeEditorSectionProps {
   currentAnswer: Answer | null;
   task: Task | null;
   activeTab: string;
+  currentCode: string;
+  setCurrentCode: Dispatch<SetStateAction<string>>;
   webSocketData?: {
     isTeacher?: boolean;
     roomPermissions: {
@@ -52,6 +54,8 @@ const CodeEditorSection: React.FC<CodeEditorSectionProps> = React.memo(
     activeTab,
     webSocketData,
     handleLanguageChange,
+    currentCode,
+    setCurrentCode,
   }) => {
     return (
       <div
@@ -65,11 +69,15 @@ const CodeEditorSection: React.FC<CodeEditorSectionProps> = React.memo(
           language={language}
           codeBefore={currentAnswer?.code_before || ""}
           codeAfter={currentAnswer?.code_after || ""}
+          currentCode={currentCode}
+          setCurrentCode={setCurrentCode}
           handleLanguageChange={handleLanguageChange}
           disabled={
             !(
-              Boolean(webSocketData?.roomPermissions.studentEditCodeEnabled || webSocketData?.completed) ||
-              Boolean(webSocketData?.isTeacher)
+              Boolean(
+                webSocketData?.roomPermissions.studentEditCodeEnabled ||
+                  webSocketData?.completed
+              ) || Boolean(webSocketData?.isTeacher)
             )
           }
           readOnly={

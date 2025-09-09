@@ -93,22 +93,23 @@ const IDE: React.FC<IDEProps> = React.memo(({ webSocketData, telegramId }) => {
   const answer_id = searchParams.get("answer_id");
   const roomId = searchParams.get("roomId");
 
-  const { isRunning, handleRunCode, onSendCheck } = useCodeExecution({
-    currentAnswer,
-    task,
-    code,
-    inputData,
-    outputData,
-    taskId,
-    answer_id,
-    language,
-    setOutput,
-    setStatus,
-    setActiveTab,
-    setSubmitResult,
-    onOpen,
-    status,
-  });
+  const { isRunning, handleRunCode, onSendCheck, currentCode, setCurrentCode } =
+    useCodeExecution({
+      currentAnswer,
+      task,
+      code,
+      inputData,
+      outputData,
+      taskId,
+      answer_id,
+      language,
+      setOutput,
+      setStatus,
+      setActiveTab,
+      setSubmitResult,
+      onOpen,
+      status,
+    });
 
   const onModalRunCode = async () => {
     if (!task?.answers?.length || !taskId) {
@@ -129,10 +130,6 @@ const IDE: React.FC<IDEProps> = React.memo(({ webSocketData, telegramId }) => {
       });
     }
   }, [setSearchParams, webSocketData?.language]);
-
-  const memoizedSetCode = useCallback((newCode: string) => {
-    setCode(newCode);
-  }, []);
 
   const handleStartFormSubmit = useCallback(
     (username?: string) => {
@@ -393,10 +390,12 @@ const IDE: React.FC<IDEProps> = React.memo(({ webSocketData, telegramId }) => {
         <div className="h-full flex flex-col md:flex-row">
           <CodeEditorSection
             code={code}
-            setCode={memoizedSetCode}
+            setCode={setCode}
             language={language}
             currentAnswer={currentAnswer}
             task={task}
+            currentCode={currentCode}
+            setCurrentCode={setCurrentCode}
             activeTab={activeTab}
             webSocketData={memoizedWebSocketData}
             handleLanguageChange={handleLanguageChange}

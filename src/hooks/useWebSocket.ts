@@ -241,7 +241,7 @@ export const useWebSocket = ({
             setMyUserColor(eventData.userColor || "#FF6B6B");
             setIsTeacher(eventData.isTeacher);
             setLanguage(eventData.language);
-            setJoinedCode(eventData.lastCode);
+            setJoinedCode(eventData.joinedCode);
             localStorage.setItem('telegramId', eventData.telegramId);
             myTelegramIdRef.current = eventData.telegramId.startsWith('i') ? eventData.telegramId : myTelegramIdRef.current;
 
