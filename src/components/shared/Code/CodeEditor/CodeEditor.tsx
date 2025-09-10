@@ -59,7 +59,7 @@ interface IProps {
   disabled: boolean;
   handleLanguageChange: (language: Language) => void;
   isTeacher?: boolean;
-  joinedCode?: string;
+  isWebSocket: boolean;
 }
 
 const replaceSelectionsEffect = StateEffect.define<DecorationSet>();
@@ -101,6 +101,7 @@ const CodeEditor: React.FC<IProps> = React.memo(
     handleLanguageChange,
     isTeacher,
     setCurrentCode,
+    isWebSocket,
   }) => {
     const editor = useRef<EditorView>();
     const editorContainer = useRef<HTMLDivElement>(null);
@@ -316,7 +317,10 @@ const CodeEditor: React.FC<IProps> = React.memo(
             if (update.docChanged) {
               try {
                 const newValue = update.state.doc.toString();
-                setCurrentCode(newValue);
+
+                if (isWebSocket) {
+                  setCurrentCode(newValue);
+                }
 
                 if (
                   !newValue.startsWith(codeBefore) ||
@@ -464,7 +468,7 @@ const CodeEditor: React.FC<IProps> = React.memo(
       return () => {
         view.destroy();
       };
-    }, [language, effectiveReadOnly, codeBefore, codeAfter, ydoc]);
+    }, [language, effectiveReadOnly, codeBefore, codeAfter, ydoc, isWebSocket]);
 
     useEffect(() => {
       if (editor.current && value !== prevValue.current) {
