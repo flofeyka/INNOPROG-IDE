@@ -56,8 +56,6 @@ interface WebSocketData {
   updatesFromProps?: Uint8Array[];
   sendEditMember: (username?: string) => void;
   sendRoomPermissions: (permissions: RoomPermissions) => void;
-  activeTypers: Set<string>;
-  markUserAsTyping: (telegramId: string) => void;
   completed: boolean;
   sendChangeLanguage: (language: Language) => void;
   language?: Language;
@@ -93,7 +91,7 @@ const IDE: React.FC<IDEProps> = React.memo(({ webSocketData, telegramId }) => {
   const answer_id = searchParams.get("answer_id");
   const roomId = searchParams.get("roomId");
 
-  const { isRunning, handleRunCode, onSendCheck, currentCode, setCurrentCode } =
+  const { isRunning, handleRunCode, onSendCheck, setCurrentCode } =
     useCodeExecution({
       currentAnswer,
       task,
@@ -131,19 +129,7 @@ const IDE: React.FC<IDEProps> = React.memo(({ webSocketData, telegramId }) => {
     }
   }, [setSearchParams, webSocketData?.language]);
 
-  const handleStartFormSubmit = useCallback(
-    (username?: string) => {
-      if (webSocketData?.sendEditMember) {
-        webSocketData.sendEditMember(username);
-      }
-      setShowStartModal(false);
-    },
-    [webSocketData?.sendEditMember]
-  );
-
-  // Проверяем, нужно ли показывать модалку (только если есть roomId)
   useEffect(() => {
-    // Если нет roomId, то модалка не нужна
     if (!roomId) {
       return;
     }
@@ -152,42 +138,36 @@ const IDE: React.FC<IDEProps> = React.memo(({ webSocketData, telegramId }) => {
       return;
     }
 
-    // Проверяем localStorage
     const savedUsername = localStorage.getItem("innoprog-username");
 
-    // Проверяем, есть ли у текущего пользователя имя в roomMembers
     const currentMember = webSocketData.roomMembers?.find(
       (member) => member.isYourself
     );
 
-    // Показываем модалку только если нет сохраненного имени И у пользователя нет имени в комнате
     if (
       !savedUsername &&
       (!currentMember?.username || currentMember.username.trim() === "")
     ) {
       setShowStartModal(true);
     } else {
-      // Если есть сохраненное имя, но нет имени у пользователя в комнате - отправляем его
       if (
         savedUsername &&
         (!currentMember?.username || currentMember.username.trim() === "")
       ) {
+        console.log("render");
         webSocketData?.sendEditMember?.(savedUsername);
       }
     }
   }, [
     webSocketData?.isConnected,
     webSocketData?.isJoinedRoom,
-    webSocketData?.roomMembers,
-    webSocketData?.sendEditMember,
+    roomId,
     telegramId,
   ]);
 
-  // Состояние для отслеживания источников кода
   const [codeSource, setCodeSource] = useState<"none" | "api" | "room">("none");
   const [roomCodeLoaded, setRoomCodeLoaded] = useState(false);
 
-  // Загрузка данных задачи
   useEffect(() => {
     const loadTask = async () => {
       if (!taskId) return;
@@ -247,10 +227,9 @@ const IDE: React.FC<IDEProps> = React.memo(({ webSocketData, telegramId }) => {
     loadCode();
   }, [taskId, answer_id, roomId, roomCodeLoaded, codeSource]);
 
-  // Обработчик события загрузки состояния комнаты
   useEffect(() => {
     const handleRoomStateLoaded = (event: CustomEvent) => {
-      const { lastCode, participantCount } = event.detail;
+      const { lastCode } = event.detail;
 
       if (lastCode && lastCode.trim()) {
         let editableCode = lastCode;
@@ -291,7 +270,7 @@ const IDE: React.FC<IDEProps> = React.memo(({ webSocketData, telegramId }) => {
         handleRoomStateLoaded as EventListener
       );
     };
-  }, [roomId, task]); // Добавляем task как зависимость
+  }, [roomId, task]);
 
   const handleLanguageChange = useCallback(
     (lang: Language) => {
@@ -314,7 +293,6 @@ const IDE: React.FC<IDEProps> = React.memo(({ webSocketData, telegramId }) => {
       selections: webSocketData.selections,
       onSendUpdate: webSocketData.onSendUpdate,
       updatesFromProps: webSocketData.updatesFromProps,
-      activeTypers: webSocketData.activeTypers,
       myTelegramId: telegramId,
       completed: webSocketData.completed,
       roomPermissions: webSocketData.roomPermissions,
@@ -328,14 +306,25 @@ const IDE: React.FC<IDEProps> = React.memo(({ webSocketData, telegramId }) => {
     webSocketData?.selections,
     webSocketData?.onSendUpdate,
     webSocketData?.updatesFromProps,
-    webSocketData?.activeTypers,
     webSocketData?.joinedCode,
     searchParams,
   ]);
 
+  const {
+    isOpen: startFormIsOpen,
+    onOpen: startFormOnOpen,
+    onOpenChange: startFormOnOpenChange,
+  } = useDisclosure();
+
+  useEffect(() => {
+    const savedUsername = localStorage.getItem("innoprog-username");
+    if (!savedUsername) {
+      startFormOnOpen();
+    }
+  }, [startFormOnOpen]);
+
   return (
     <div className="min-h-screen h-screen flex flex-col bg-ide-background text-ide-text-primary">
-      {/* Лоадер подключения - только если есть roomId и проблемы с подключением */}
       {roomId &&
         (!webSocketData?.isConnected || !webSocketData?.isJoinedRoom) && (
           <Loader
@@ -370,7 +359,16 @@ const IDE: React.FC<IDEProps> = React.memo(({ webSocketData, telegramId }) => {
       {roomId &&
         webSocketData?.isConnected &&
         webSocketData?.isJoinedRoom &&
-        showStartModal && <StartFormModal onSendForm={handleStartFormSubmit} />}
+        showStartModal && (
+          <StartFormModal
+            onOpen={startFormOnOpen}
+            isOpen={startFormIsOpen}
+            onOpenChange={startFormOnOpenChange}
+            onSendForm={(username?: string) =>
+              webSocketData.sendEditMember(username)
+            }
+          />
+        )}
 
       <Header
         completedSession={webSocketData?.completed}

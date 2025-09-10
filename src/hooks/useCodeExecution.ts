@@ -62,7 +62,7 @@ export const useCodeExecution = ({
 					task?.answers![0].output.trim() || outputData.trim() || "-",
 				program: fullCode,
 				test_number: -1,
-				timeout: currentAnswer?.timeout || 2,
+				timeout: currentAnswer?.timeout || 30,
 			};
 
 			const result = await api.checkCode(checkData, language);

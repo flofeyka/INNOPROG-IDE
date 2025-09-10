@@ -277,19 +277,6 @@ const CodeEditor: React.FC<IProps> = React.memo(
       });
     }, [editor, selections]);
 
-    const awarenessRef = React.useRef<Awareness | null>(null);
-
-    useEffect(() => {
-      if (ydoc && !awarenessRef.current) {
-        const awareness = new Awareness(ydoc);
-        awareness.setLocalStateField("user", {
-          name: "adolf",
-          color: "#ff0000", // временно сделай цвет видимым
-        });
-        awarenessRef.current = awareness;
-      }
-    }, [ydoc]);
-
     useEffect(() => {
       if (!editorContainer.current) return;
 
@@ -315,19 +302,20 @@ const CodeEditor: React.FC<IProps> = React.memo(
       const state = EditorState.create({
         doc: `${codeBefore}${value}${codeAfter}`,
         extensions: [
-          ...(ydoc && awarenessRef.current
-            ? [yCollab(ydoc.getText("codemirror"), awarenessRef.current)]
-            : []),
+          yCollab(ydoc.getText("codemirror"), new Y.Map()),
           languageSupport,
           oneDark,
           keymap.of([...defaultKeymap, indentWithTab]),
           selectionHighlightField,
           lineNumbers(),
           EditorView.updateListener.of((update) => {
+            if (update.focusChanged && !update.view.hasFocus) {
+              sendSelectionRef.current?.({ clearSelection: true });
+            }
+
             if (update.docChanged) {
               try {
                 const newValue = update.state.doc.toString();
-
                 setCurrentCode(newValue);
 
                 if (
@@ -341,8 +329,6 @@ const CodeEditor: React.FC<IProps> = React.memo(
                       insert: `${codeBefore}${prevValue.current}${codeAfter}`,
                     },
                   });
-
-                  console.log(`${codeBefore}${prevValue.current}${codeAfter}`);
                   return;
                 }
 
@@ -371,40 +357,46 @@ const CodeEditor: React.FC<IProps> = React.memo(
               }
             }
 
-            if (
-              update.selectionSet &&
-              !update.docChanged &&
-              sendSelectionRef.current
-            ) {
+            // === 2. Обновление курсора / выделения ===
+            if (update.selectionSet && sendSelectionRef.current) {
               try {
                 const selection = update.state.selection.main;
                 const doc = update.state.doc;
 
+                // === Выделение текста ===
                 if (!selection.empty) {
-                  const selectedText = doc.sliceString(
-                    selection.from,
-                    selection.to
-                  );
                   const startLine = doc.lineAt(selection.from);
                   const endLine = doc.lineAt(selection.to);
 
-                  sendSelectionRef.current({
-                    selectionStart: {
-                      line: startLine.number,
-                      column: selection.from - startLine.from,
-                    },
-                    selectionEnd: {
-                      line: endLine.number,
-                      column: selection.to - endLine.from,
-                    },
-                    selectedText,
-                  });
-                  hadTextSelection.current = true;
-                } else {
+                  // защита от выхода за границы
+                  if (selection.from >= 0 && selection.to <= doc.length) {
+                    const selectedText = doc.sliceString(
+                      selection.from,
+                      selection.to
+                    );
+
+                    sendSelectionRef.current({
+                      selectionStart: {
+                        line: startLine.number,
+                        column: selection.from - startLine.from,
+                      },
+                      selectionEnd: {
+                        line: endLine.number,
+                        column: selection.to - endLine.from,
+                      },
+                      selectedText,
+                    });
+                    hadTextSelection.current = true;
+                  }
+                }
+
+                // === Просто курсор ===
+                else {
                   const line = doc.lineAt(selection.head);
                   const lineNumber = line.number;
                   const columnNumber = selection.head - line.from;
 
+                  // если до этого было выделение → сбрасываем
                   if (hadTextSelection.current) {
                     sendSelectionRef.current({
                       line: lineNumber,
@@ -472,14 +464,7 @@ const CodeEditor: React.FC<IProps> = React.memo(
       return () => {
         view.destroy();
       };
-    }, [
-      language,
-      effectiveReadOnly,
-      codeBefore,
-      codeAfter,
-      ydoc,
-      awarenessRef.current,
-    ]);
+    }, [language, effectiveReadOnly, codeBefore, codeAfter, ydoc]);
 
     useEffect(() => {
       if (editor.current && value !== prevValue.current) {

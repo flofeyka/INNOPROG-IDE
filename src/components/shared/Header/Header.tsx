@@ -8,8 +8,8 @@ import React from "react";
 import { isDesktop } from "../../..";
 import { RoomPermissions } from "../../../types/room";
 import Settings from "../Room/Settings/Settings";
-import { EditUsernameModal } from "../Room/StartFormModal/StartFormModal";
 import { RoomMember } from "../../../hooks/useWebSocket";
+import StartFormModal from "../Room/StartFormModal/StartFormModal";
 
 interface IProps {
   members?: RoomMember[];
@@ -244,8 +244,9 @@ const Header: React.FC<IProps> = ({
         )}
       </header>
 
-      <EditUsernameModal
+      <StartFormModal
         isOpen={isOpen}
+        onOpen={onOpen}
         onOpenChange={onOpenChange}
         onSendForm={handleEditSubmit}
         currentUsername={editingMember?.username || ""}
