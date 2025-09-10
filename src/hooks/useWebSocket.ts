@@ -61,9 +61,6 @@ export const useWebSocket = ({
     const [language, setLanguage] = useState<Language | undefined>(undefined);
     const [joinedCode, setJoinedCode] = useState<string>('');
 
-    const [activeTypers, setActiveTypers] = useState<Set<string>>(new Set());
-    const typingTimeouts = useRef<Map<string, NodeJS.Timeout>>(new Map());
-
     const socketRef = useRef<Socket | null>(null);
     const socketUrlRef = useRef<string>(socketUrl);
     const myTelegramIdRef = useRef<string>(myTelegramId);
@@ -121,33 +118,6 @@ export const useWebSocket = ({
             });
         }
     }, [completed]);
-
-    const markUserAsTyping = useCallback(
-        (telegramId: string) => {
-            if (completed) return;
-            setActiveTypers((prev) => {
-                const newSet = new Set(prev);
-                newSet.add(telegramId);
-                return newSet;
-            });
-
-            if (typingTimeouts.current.has(telegramId)) {
-                clearTimeout(typingTimeouts.current.get(telegramId)!);
-            }
-
-            const timeout = setTimeout(() => {
-                setActiveTypers((prev) => {
-                    const newSet = new Set(prev);
-                    newSet.delete(telegramId);
-                    return newSet;
-                });
-                typingTimeouts.current.delete(telegramId);
-            }, 2000);
-
-            typingTimeouts.current.set(telegramId, timeout);
-        },
-        [completed]
-    );
 
     const connectWebSocket = useCallback(() => {
         const currentRoomId = roomIdRef.current;
@@ -281,7 +251,7 @@ export const useWebSocket = ({
         socket.on("members-updated", (eventData) => {
             const members = eventData.members || [];
             const me = members.find((member: RoomMember) => member.telegramId === myTelegramIdRef.current);
-            if (me) {
+            if (me && me.username) {
                 localStorage.setItem('innoprog-username', me.username);
             }
             setRoomMembers(members);
@@ -364,8 +334,6 @@ export const useWebSocket = ({
         });
 
         socket.on("code-edit-action", (eventData) => {
-            markUserAsTyping(eventData.telegramId);
-
             setCodeEdits(eventData.update);
         });
 
@@ -410,50 +378,11 @@ export const useWebSocket = ({
             }
         });
 
-        socket.on("room-sound", (eventData) => {
-            if (
-                eventData.telegramId !== myTelegramIdRef.current &&
-                eventData.soundType === "permission-change"
-            ) {
-                try {
-                    const audioContext = new (window.AudioContext ||
-                        (window as any).webkitAudioContext)();
-                    const oscillator = audioContext.createOscillator();
-                    const gainNode = audioContext.createGain();
-
-                    oscillator.connect(gainNode);
-                    gainNode.connect(audioContext.destination);
-
-                    oscillator.frequency.setValueAtTime(700, audioContext.currentTime);
-                    gainNode.gain.setValueAtTime(0, audioContext.currentTime);
-                    gainNode.gain.linearRampToValueAtTime(
-                        0.03,
-                        audioContext.currentTime + 0.01
-                    );
-                    gainNode.gain.exponentialRampToValueAtTime(
-                        0.001,
-                        audioContext.currentTime + 0.15
-                    );
-
-                    oscillator.type = "sine";
-                    oscillator.start(audioContext.currentTime);
-                    oscillator.stop(audioContext.currentTime + 0.15);
-                } catch (e) {
-                    try {
-                        const audio = new Audio();
-                        audio.volume = 0.08;
-                        audio.src = `data:audio/wav;base64,UklGRlQDAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=`;
-                        audio.play();
-                    } catch (fallbackError) {
-                    }
-                }
-            }
-        });
-
         socket.on("join-room:error", (eventData) => {
             setConnectionError(eventData.message);
         });
-    }, [joinRoom, markUserAsTyping]);
+    }, [joinRoom, clearIntervals]);
+
     useEffect(() => {
         if (
             forceReconnectTrigger > 0 &&
@@ -569,9 +498,6 @@ export const useWebSocket = ({
 
         return () => {
             shouldReconnectRef.current = false;
-            clearIntervals();
-            typingTimeouts.current.forEach((timeout) => clearTimeout(timeout));
-            typingTimeouts.current.clear();
 
             if (socketRef.current) {
                 socketRef.current.close();
@@ -579,7 +505,7 @@ export const useWebSocket = ({
             window.removeEventListener("beforeunload", handleBeforeUnload);
             document.removeEventListener("visibilitychange", handleVisibilityChange);
         };
-    }, []);
+    }, [roomId, connectWebSocket, clearIntervals]);
 
     const sendCursorPosition = useCallback(
         (position: [number, number]) => {
@@ -604,7 +530,7 @@ export const useWebSocket = ({
             selectedText?: string;
             clearSelection?: boolean;
         }) => {
-            if (socketRef.current?.connected && roomIdRef.current && (!completed && roomPermissions.studentSelectionEnabled || isTeacher)) {
+            if (socketRef.current?.connected && roomIdRef.current && ((!completed && roomPermissions.studentSelectionEnabled) || isTeacher)) {
                 socketRef.current.emit("selection", {
                     telegramId: myTelegramId,
                     roomId: roomIdRef.current,
@@ -612,14 +538,12 @@ export const useWebSocket = ({
                 });
             }
         },
-        [completed, roomPermissions.studentSelectionEnabled, isTeacher]
+        [completed, roomPermissions.studentSelectionEnabled, isTeacher, myTelegramId]
     );
 
     const sendCodeEdit = useCallback(
         (update: Uint8Array) => {
-            if (socketRef.current?.connected && roomIdRef.current && !completed && !isTeacher && roomPermissions.studentEditCodeEnabled) {
-                markUserAsTyping(myTelegramIdRef.current);
-
+            if (socketRef.current?.connected && roomIdRef.current && !completed && (roomPermissions.studentEditCodeEnabled || isTeacher)) {
                 socketRef.current.emit("code-edit", {
                     roomId: roomIdRef.current,
                     telegramId: myTelegramIdRef.current,
@@ -627,7 +551,7 @@ export const useWebSocket = ({
                 });
             }
         },
-        [markUserAsTyping, completed, roomPermissions.studentEditCodeEnabled]
+        [completed, roomPermissions.studentEditCodeEnabled, isTeacher]
     );
 
 
@@ -636,8 +560,8 @@ export const useWebSocket = ({
             if (completed) return;
             if (socketRef.current?.connected && roomIdRef.current) {
                 socketRef.current.emit("edit-member", {
-                    changeTelegramId: telegramId,
-                    telegramId: myTelegramId,
+                    changeTelegramId: telegramId || localStorage.getItem('telegramId'),
+                    telegramId: myTelegramIdRef.current,
                     roomId: roomIdRef.current,
                     username,
                 });
@@ -654,7 +578,7 @@ export const useWebSocket = ({
                 language
             })
         }
-    }, [completed]);
+    }, [completed, myTelegramId]);
 
     const sendRoomPermissions = useCallback(
         (permissions: RoomPermissions) => {
@@ -666,7 +590,7 @@ export const useWebSocket = ({
                 });
             }
         },
-        [completed]
+        [completed, myTelegramId, roomIdRef]
     );
 
     return {
@@ -686,8 +610,6 @@ export const useWebSocket = ({
         onSendUpdate: sendCodeEdit,
         sendEditMember,
         sendRoomPermissions,
-        activeTypers,
-        markUserAsTyping,
         connectionError,
         completeSession,
         completed,

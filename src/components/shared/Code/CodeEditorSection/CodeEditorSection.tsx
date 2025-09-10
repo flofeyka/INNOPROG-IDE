@@ -35,7 +35,6 @@ interface CodeEditorSectionProps {
     >;
     onSendUpdate?: (update: Uint8Array) => void;
     updatesFromProps?: Uint8Array[];
-    activeTypers: Set<string>;
     myTelegramId: string;
     completed: boolean;
   };
@@ -85,7 +84,6 @@ const CodeEditorSection: React.FC<CodeEditorSectionProps> = React.memo(
           selections={webSocketData?.selections}
           onSendUpdate={webSocketData?.onSendUpdate}
           updatesFromProps={webSocketData?.updatesFromProps}
-          activeTypers={webSocketData?.activeTypers}
           myTelegramId={webSocketData?.myTelegramId}
           isTeacher={webSocketData?.isTeacher}
         />
