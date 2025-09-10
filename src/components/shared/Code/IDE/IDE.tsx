@@ -288,6 +288,8 @@ const IDE: React.FC<IDEProps> = React.memo(({ webSocketData, telegramId }) => {
   const memoizedWebSocketData = useMemo(() => {
     if (!webSocketData) return undefined;
 
+    console.log(webSocketData.isConnected);
+
     return {
       sendSelection: webSocketData.sendSelection,
       selections: webSocketData.selections,
@@ -298,6 +300,7 @@ const IDE: React.FC<IDEProps> = React.memo(({ webSocketData, telegramId }) => {
       roomPermissions: webSocketData.roomPermissions,
       isTeacher: webSocketData.isTeacher,
       joinedCode: webSocketData.joinedCode,
+      isConnected: webSocketData.isConnected,
     };
   }, [
     webSocketData?.isTeacher,
@@ -307,6 +310,7 @@ const IDE: React.FC<IDEProps> = React.memo(({ webSocketData, telegramId }) => {
     webSocketData?.onSendUpdate,
     webSocketData?.updatesFromProps,
     webSocketData?.joinedCode,
+    webSocketData?.isConnected,
     searchParams,
   ]);
 

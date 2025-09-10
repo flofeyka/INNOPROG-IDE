@@ -12,6 +12,7 @@ interface CodeEditorSectionProps {
   setCurrentCode: Dispatch<SetStateAction<string>>;
   webSocketData?: {
     isTeacher?: boolean;
+    isConnected?: boolean;
     roomPermissions: {
       studentEditCodeEnabled: boolean;
     };
@@ -53,6 +54,8 @@ const CodeEditorSection: React.FC<CodeEditorSectionProps> = React.memo(
     handleLanguageChange,
     setCurrentCode,
   }) => {
+    console.log(webSocketData?.isConnected);
+
     return (
       <div
         className={`h-full md:w-1/2 p-4 ${
@@ -86,6 +89,7 @@ const CodeEditorSection: React.FC<CodeEditorSectionProps> = React.memo(
           updatesFromProps={webSocketData?.updatesFromProps}
           myTelegramId={webSocketData?.myTelegramId}
           isTeacher={webSocketData?.isTeacher}
+          isWebSocket={!!webSocketData?.isConnected}
         />
       </div>
     );
